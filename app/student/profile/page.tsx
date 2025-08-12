@@ -1,3 +1,4 @@
+// Student Profile Edit page for viewing/updating profile details
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,12 +8,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+// Defines form validation rules using Zod
 const schema = z.object({
   full_name: z.string().min(2, { message: "Please enter your full name" }),
 });
 
 type Values = z.infer<typeof schema>;
 
+// Main profile page component for students
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -25,6 +28,10 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
+    /**
+     * Checks for authentication, redirects if not logged in,
+     * and fetches the current profile data to pre-fill the form.
+     */
     let active = true;
     (async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -49,6 +56,10 @@ export default function ProfilePage() {
     return () => { active = false; };
   }, [router, setValue]);
 
+  /**
+   * Handles saving changes to the profile
+   * and redirects the user to the dashboard.
+   */
   const onSubmit = async (values: Values) => {
     setSaving(true);
     setError(null);
@@ -71,14 +82,17 @@ export default function ProfilePage() {
       return;
     }
 
-    router.replace("/dashboard");
+    router.replace("/student/dashboard");
   };
 
+  // Shows a loading message while profile data is being fetched
   if (loading) return <p className="text-center mt-10">Loading...</p>;
 
   return (
     <section className="max-w-md mx-auto space-y-6">
       <h1 className="text-2xl font-semibold">Edit profile</h1>
+      {/* Editable profile form with a single "full name" field,
+          also shows validation errors and save status */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="block text-sm font-medium" htmlFor="full_name">Full name</label>

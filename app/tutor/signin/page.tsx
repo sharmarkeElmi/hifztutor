@@ -1,5 +1,7 @@
 "use client";
 
+// Tutor Sign-In page: Allows tutors to log in and, if authorized, redirects them to their dashboard.
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -8,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+// Zod schema for validating email and password inputs
 const schema = z.object({
   email: z.string().email({ message: "Please enter a valid email" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
@@ -15,6 +18,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+// TutorSignInPage handles tutor sign-in, verifies their role, and redirects accordingly.
 export default function TutorSignInPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -24,19 +28,23 @@ export default function TutorSignInPage() {
     defaultValues: { email: "", password: "" },
   });
 
+  // Handles the sign-in process, checks user role, and redirects tutors to their dashboard
   const onSubmit = async (values: Values) => {
+    // Set loading state and clear any previous errors
     setLoading(true);
     setError(null);
 
+    // Attempt to sign in using Supabase with provided credentials
     const { error: signInError } = await supabase.auth.signInWithPassword(values);
     setLoading(false);
 
+    // Handle sign-in errors
     if (signInError) {
       setError(signInError.message);
       return;
     }
 
-    // ✅ Check if the signed-in user is a tutor
+    // Fetch the current user and their profile role
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
     if (user) {
@@ -46,6 +54,7 @@ export default function TutorSignInPage() {
         .eq("id", user.id)
         .maybeSingle();
 
+      // Redirect tutors to their dashboard, otherwise show unauthorized error
       if (profile?.role === "tutor") {
         router.push("/tutor/dashboard");
       } else {
@@ -55,6 +64,7 @@ export default function TutorSignInPage() {
     }
   };
 
+  // UI form for tutors to enter credentials, with sign-up and student sign-in links
   return (
     <section className="max-w-md mx-auto space-y-6">
       <h1 className="text-2xl font-semibold">Tutor — Sign in</h1>
