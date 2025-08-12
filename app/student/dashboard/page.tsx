@@ -120,13 +120,10 @@ export default function StudentDashboardPage() {
     });
   };
 
-  // Placeholder join action (will open LiveKit later)
+  // Join action (MVP): navigate to a room named after the lesson id.
+  // Later, this will use a real `roomName` stored in the DB with each booking.
   const handleJoin = (lesson: Lesson) => {
-    alert(
-      `(Placeholder) Joining lesson with ${lesson.withName} at ${formatDT(
-        lesson.startsAt
-      )}.\nIn a future step this will open the LiveKit room.`
-    );
+    window.location.assign(`/lesson/${lesson.id}`);
   };
 
   // Sign out and return to the student sign-in page
@@ -157,6 +154,17 @@ export default function StudentDashboardPage() {
             Edit profile
           </Link>
         </p>
+      </div>
+
+      {/* Quick actions: visible to signed-in students */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Primary path for MVP joining: manual room entry page */}
+        <Link
+          href="/lesson/join"
+          className="inline-flex items-center justify-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        >
+          Join a live lesson
+        </Link>
       </div>
 
       {/* Next Lesson */}
