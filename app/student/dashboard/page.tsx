@@ -145,7 +145,7 @@ export default function StudentDashboardPage() {
     <section className="max-w-4xl mx-auto space-y-6">
       {/* Top bar / Greeting */}
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="text-2xl font-semibold">Student Dashboard</h1>
         <p className="text-muted-foreground">
           Welcome back, {fullName ? fullName : email}
         </p>
