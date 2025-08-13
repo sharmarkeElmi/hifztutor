@@ -9,10 +9,14 @@
 import RoomClient from "./room-client";
 
 type PageProps = {
-  params: { room: string };
+  // In Next.js App Router, params can be a Promise, so we type it accordingly
+  params: Promise<{ room: string }>;
 };
 
-export default function LessonRoomPage({ params }: PageProps) {
+export default async function LessonRoomPage({ params }: PageProps) {
+  // Await params because in Next.js App Router, route params can be async
+  const { room } = await params;
+
   const livekitUrl = process.env.LIVEKIT_URL; // safe to read on server
 
   if (!livekitUrl) {
@@ -28,6 +32,6 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   return (
-    <RoomClient roomName={params.room} livekitUrl={livekitUrl} />
+    <RoomClient roomName={room} livekitUrl={livekitUrl} />
   );
 }
