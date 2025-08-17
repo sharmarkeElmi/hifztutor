@@ -12,7 +12,7 @@
  * - Dev helper uses PEER UUID (not email)
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Shell from "../components/dashboard/Shell";
@@ -28,7 +28,7 @@ type Conversation = {
 
 type MemberRow = {
   conversation_id: string;
-  last_read_at: string;
+  last_read_at: string | null;
 };
 
 export default function MessagesInboxPage() {
@@ -42,6 +42,73 @@ export default function MessagesInboxPage() {
   // Dev helper: start a conversation by the other user's UUID
   const [peerIdInput, setPeerIdInput] = useState("");
   const [starting, setStarting] = useState(false);
+
+  // ---- Refetch helper (used by focus + realtime)
+  const refetchConversations = useCallback(async () => {
+    if (!me?.id) return;
+
+    // 1) my membership rows (to get conversation IDs + last_read_at)
+    const { data: myMemberships, error: membErr } = await supabase
+      .from("conversation_members")
+      .select("conversation_id, last_read_at")
+      .eq("user_id", me.id);
+
+    if (membErr) {
+      console.warn("refetchConversations: membership error", membErr);
+      return;
+    }
+
+    const convIds = (myMemberships ?? []).map((m) => m.conversation_id);
+    if (!convIds.length) {
+      setConversations([]);
+      setUnreadMap({});
+      return;
+    }
+
+    // 2) conversations meta
+    const { data: convs, error: convErr } = await supabase
+      .from("conversations")
+      .select("id, created_at, user_a, user_b")
+      .in("id", convIds)
+      .order("created_at", { ascending: false });
+
+    if (convErr) {
+      console.warn("refetchConversations: conversations error", convErr);
+      return;
+    }
+
+    setConversations((convs ?? []) as Conversation[]);
+
+    // 3) unread counts per conversation (same logic as initial load)
+    try {
+      const memberByConv = new Map(
+        ((myMemberships ?? []) as MemberRow[]).map((m) => [
+          m.conversation_id,
+          m.last_read_at ?? "1970-01-01T00:00:00Z",
+        ])
+      );
+
+      const viewerId = me.id;
+
+      const tasks = (convs ?? []).map(async (c) => {
+        const lastRead = memberByConv.get(c.id) ?? "1970-01-01T00:00:00Z";
+
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", c.id)
+          .neq("sender_id", viewerId)
+          .gt("created_at", lastRead);
+
+        return [c.id, count ?? 0] as const;
+      });
+
+      const results = await Promise.all(tasks);
+      setUnreadMap(Object.fromEntries(results));
+    } catch (e) {
+      console.warn("refetchConversations: unread counts failed", e);
+    }
+  }, [me?.id]);
 
   // ---- Auth + role + load my conversations
   useEffect(() => {
@@ -151,7 +218,49 @@ export default function MessagesInboxPage() {
     return () => {
       mounted = false;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- Refetch triggers: window focus + realtime updates to my conversation_members rows
+  useEffect(() => {
+    if (!me?.id) return;
+
+    const onFocus = () => {
+      refetchConversations();
+    };
+    window.addEventListener("focus", onFocus);
+
+    const ch = supabase
+      .channel(`cm-updates-${me.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversation_members",
+          filter: `user_id=eq.${me.id}`,
+        },
+        () => {
+          refetchConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      supabase.removeChannel(ch);
+    };
+  }, [me?.id, refetchConversations]);
+
+  // ---- Also refetch when a thread broadcasts a localStorage "read" ping
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "__hifztutor_conv_read__") {
+        refetchConversations();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [refetchConversations]);
 
   // ---- Render list rows with derived peerId + createdAt
   const list = useMemo(() => {

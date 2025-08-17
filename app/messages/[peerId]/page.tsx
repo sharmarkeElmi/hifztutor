@@ -38,7 +38,7 @@ async function markConversationRead(conversationId: string, myId: string) {
       localStorage.setItem("__hifztutor_conv_read__", JSON.stringify(payload));
       // Immediately clear it to avoid stale values
       localStorage.removeItem("__hifztutor_conv_read__");
-    } catch (_e) {
+    } catch {
       // ignore storage quota/SSR issues
     }
   } catch (e) {
