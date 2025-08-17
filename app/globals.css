@@ -1,56 +1,24 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
+/* =====================================================
+   Global CSS (no experimental at‑rules)
+   - Removed @custom-variant and @theme to avoid unknownAtRules warnings
+   - Kept all variables in :root and .dark
+   - Retained LiveKit UI overrides and polish
+   ===================================================== */
 
 :root {
   --radius: 0.625rem;
+
+  /* Core palette (light) */
   --background: oklch(1 0 0);
   --foreground: oklch(0.147 0.004 49.25);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.147 0.004 49.25);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.147 0.004 49.25);
+
   --primary: oklch(0.216 0.006 56.043);
   --primary-foreground: oklch(0.985 0.001 106.423);
   --secondary: oklch(0.97 0.001 106.424);
@@ -63,11 +31,15 @@
   --border: oklch(0.923 0.003 48.717);
   --input: oklch(0.923 0.003 48.717);
   --ring: oklch(0.709 0.01 56.259);
+
+  /* Charts (optional) */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+
+  /* Sidebar (optional) */
   --sidebar: oklch(0.985 0.001 106.423);
   --sidebar-foreground: oklch(0.147 0.004 49.25);
   --sidebar-primary: oklch(0.216 0.006 56.043);
@@ -79,12 +51,14 @@
 }
 
 .dark {
+  /* Core palette (dark) */
   --background: oklch(0.147 0.004 49.25);
   --foreground: oklch(0.985 0.001 106.423);
   --card: oklch(0.216 0.006 56.043);
   --card-foreground: oklch(0.985 0.001 106.423);
   --popover: oklch(0.216 0.006 56.043);
   --popover-foreground: oklch(0.985 0.001 106.423);
+
   --primary: oklch(0.923 0.003 48.717);
   --primary-foreground: oklch(0.216 0.006 56.043);
   --secondary: oklch(0.268 0.007 34.298);
@@ -97,11 +71,15 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.553 0.013 58.071);
+
+  /* Charts (optional) */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+
+  /* Sidebar (optional) */
   --sidebar: oklch(0.216 0.006 56.043);
   --sidebar-foreground: oklch(0.985 0.001 106.423);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -112,11 +90,110 @@
   --sidebar-ring: oklch(0.553 0.013 58.071);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* Base element styles */
+* { border-color: var(--border); }
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* ===== Custom scrollbar styling ===== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: rgba(100, 100, 100, 0.4); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(100, 100, 100, 0.6); }
+
+/* ===== Smooth transitions for UI elements ===== */
+button, a, input, select, textarea { transition: all 0.2s ease-in-out; }
+
+/* ================= LiveKit UI Overrides ================= */
+/* Participant name label: bigger, higher contrast */
+[data-lk-theme] .lk-participant-name {
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  color: #fff !important;
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+  bottom: 10px !important;
+  left: 10px !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4) !important;
+}
+
+/* Bottom control bar: glassy and elevated */
+[data-lk-theme] .lk-control-bar {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2) !important;
+  border-radius: 14px !important;
+}
+.dark [data-lk-theme] .lk-control-bar {
+  background: rgba(25, 25, 25, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Buttons in control bar */
+[data-lk-theme] .lk-control-bar .lk-button,
+[data-lk-theme] .lk-control-bar .lk-icon-button {
+  background: rgba(0,0,0,0.05) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  border-radius: 10px !important;
+  padding: 8px 10px !important;
+}
+.dark [data-lk-theme] .lk-control-bar .lk-button,
+.dark [data-lk-theme] .lk-control-bar .lk-icon-button {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+[data-lk-theme] .lk-control-bar .lk-button:hover,
+[data-lk-theme] .lk-control-bar .lk-icon-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+/* Device menus (mic/camera dropdowns) — strong readable surface */
+[data-lk-theme] .lk-device-menu,
+[data-lk-theme] .lk-menu,
+[data-lk-theme] .lk-device-selector-menu {
+  background: #f2f2f2 !important; /* clear in light mode */
+  color: #111 !important;
+  border: 1px solid rgba(0,0,0,0.18) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.22) !important;
+  padding: 8px !important;
+  z-index: 60 !important; /* above control bar */
+}
+.dark [data-lk-theme] .lk-device-menu,
+.dark [data-lk-theme] .lk-menu,
+.dark [data-lk-theme] .lk-device-selector-menu {
+  background: rgba(30,30,30,0.98) !important;
+  color: #f5f5f5 !important;
+  border-color: rgba(255,255,255,0.2) !important;
+}
+
+[data-lk-theme] .lk-device-menu button,
+[data-lk-theme] .lk-menu button,
+[data-lk-theme] .lk-device-selector-menu button {
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+}
+[data-lk-theme] .lk-device-menu button:hover,
+[data-lk-theme] .lk-menu button:hover,
+[data-lk-theme] .lk-device-selector-menu button:hover {
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Tooltips over video: ensure contrast */
+[data-lk-theme] .lk-tooltip {
+  background: rgba(0,0,0,0.85) !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
 }

@@ -55,43 +55,43 @@ function RoomHeader({
             : `${m}:${String(s).padStart(2, "0")}`;
     };
 
-// Update participant count on connect/join/leave
-useEffect(() => {
-  const updateCount = () => {
-    // If not connected yet, show 1 if the local participant exists, else 0.
-    if (room?.state !== "connected") {
-      const local = room?.localParticipant ? 1 : 0;
-      setParticipantCount(local);
-      return;
-    }
+    // Update participant count on connect/join/leave
+    useEffect(() => {
+        const updateCount = () => {
+            // If not connected yet, show 1 if the local participant exists, else 0.
+            if (room?.state !== "connected") {
+                const local = room?.localParticipant ? 1 : 0;
+                setParticipantCount(local);
+                return;
+            }
 
-    // When connected:
-    // Prefer LiveKit v2 API (includes local + remotes)
-    if (typeof room.numParticipants === "number") {
-      setParticipantCount(room.numParticipants);
-      return;
-    }
+            // When connected:
+            // Prefer LiveKit v2 API (includes local + remotes)
+            if (typeof room.numParticipants === "number") {
+                setParticipantCount(room.numParticipants);
+                return;
+            }
 
-    // Fallback for older versions: remote participants + local (if present)
-    const remotes = (room as LiveKitRoomType | undefined)?.remoteParticipants?.size ?? 0;
-    const local = room?.localParticipant ? 1 : 0;
-    setParticipantCount(remotes + local);
-  };
+            // Fallback for older versions: remote participants + local (if present)
+            const remotes = (room as LiveKitRoomType | undefined)?.remoteParticipants?.size ?? 0;
+            const local = room?.localParticipant ? 1 : 0;
+            setParticipantCount(remotes + local);
+        };
 
-  // Initial measurement
-  updateCount();
+        // Initial measurement
+        updateCount();
 
-  // React to connection and remote participant changes
-  room.on("connected", updateCount);
-  room.on("participantConnected", updateCount);
-  room.on("participantDisconnected", updateCount);
+        // React to connection and remote participant changes
+        room.on("connected", updateCount);
+        room.on("participantConnected", updateCount);
+        room.on("participantDisconnected", updateCount);
 
-  return () => {
-    room.off("connected", updateCount);
-    room.off("participantConnected", updateCount);
-    room.off("participantDisconnected", updateCount);
-  };
-}, [room]);
+        return () => {
+            room.off("connected", updateCount);
+            room.off("participantConnected", updateCount);
+            room.off("participantDisconnected", updateCount);
+        };
+    }, [room]);
 
     // Start/stop a simple call timer when connected/disconnected
     useEffect(() => {
