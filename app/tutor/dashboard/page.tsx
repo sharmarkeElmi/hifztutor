@@ -20,6 +20,7 @@ export default function TutorDashboardPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // =============== Auth guard + profile load/self‑heal ===============
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function TutorDashboardPage() {
       }
 
       const user = session.user;
+      setUserId(user.id);
       setEmail(user.email ?? null);
 
       const authRole = user.user_metadata?.role as string | undefined;
@@ -120,20 +122,37 @@ export default function TutorDashboardPage() {
   return (
     <Shell role="tutor" activeKey="overview">
       {/* Header / greeting */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-semibold">Tutor Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {fullName || email}
-        </p>
-        <p className="text-sm mt-1">
-          {/* Using the shared student profile editor for now */}
-          <Link href="/student/profile" className="text-blue-600 hover:underline">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Tutor Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {fullName || email}
+          </p>
+          {errorMsg && (
+            <p className="mt-2 text-sm text-red-600">Profile error: {errorMsg}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* View public profile — disabled until userId is known */}
+          <Link
+            href={userId ? `/tutors/${userId}` : "#"}
+            aria-disabled={!userId}
+            className={`inline-flex items-center rounded-md border px-3 py-2 text-sm ${
+              userId ? "hover:bg-gray-50" : "pointer-events-none opacity-50"
+            }`}
+          >
+            View public profile
+          </Link>
+
+          {/* Edit tutor profile */}
+          <Link
+            href="/tutor/profile"
+            className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
             Edit profile
           </Link>
-        </p>
-        {errorMsg && (
-          <p className="mt-2 text-sm text-red-600">Profile error: {errorMsg}</p>
-        )}
+        </div>
       </div>
 
       {/* Quick actions */}
