@@ -45,10 +45,10 @@ export default function Header() {
             Find a HifzTutor
           </Link>
 
-          {/* Link: Become a HifzTutor */}
+          {/* Become a HifzTutor (links to /become-a-tutor) */}
           <Link
-            href="/teach"
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            href="/become-a-tutor"
+            className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50"
           >
             Become a HifzTutor
           </Link>
