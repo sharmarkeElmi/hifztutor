@@ -5,13 +5,13 @@
  * DashboardShell (MVP)
  * ------------------------------------------------------------
  * - Sticky left sidebar with brand + navigation
- * - Role-aware links (student/tutor) for Lessons & Settings
- * - Clean card wrapper for page content
+ * - Role-aware links (student/tutor)
+ * - Unread badge for Messages (live via Postgres changes)
  * - Minimal dependencies, Tailwind-only styling
  *
  * Usage:
  *   <Shell role="student"> ...page content... </Shell>
- *   <Shell role="tutor">   ...page content... </Shell>
+ *   <Shell role="tutor"   activeKey="availability"> ... </Shell>
  */
 
 import Link from "next/link";
@@ -19,7 +19,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-type NavKey = "overview" | "lessons" | "messages" | "settings";
+// 🔧 Include "availability" to match tutor menu
+type NavKey = "overview" | "lessons" | "messages" | "settings" | "availability";
 
 type Props = {
   role: "student" | "tutor";
@@ -48,10 +49,9 @@ async function getMyId(): Promise<string | null> {
 export default function Shell({ role, children, activeKey }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-
   const [unreadTotal, setUnreadTotal] = useState<number>(0);
 
-  // Fetch unread total for sidebar badge (via RPC below)
+  // Fetch unread total for sidebar badge (via RPC)
   const refetchUnread = async () => {
     const uid = await getMyId();
     if (!uid) return setUnreadTotal(0);
@@ -63,20 +63,32 @@ export default function Shell({ role, children, activeKey }: Props) {
     setUnreadTotal(Number(data ?? 0));
   };
 
-  // Initial load + live updates
+  // Initial load + live updates on messages or read-state changes
   useEffect(() => {
     refetchUnread();
 
-    // Recompute when a new message is inserted or member is updated
     const channel = supabase
       .channel("sidebar-unread")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => refetchUnread())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "conversation_members" }, () => refetchUnread())
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        () => refetchUnread()
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversation_members" },
+        () => refetchUnread()
+      )
       .subscribe();
 
     return () => {
-      try { supabase.removeChannel(channel); } catch {}
+      try {
+        supabase.removeChannel(channel);
+      } catch {
+        /* noop */
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Primary menu (MVP)
@@ -84,14 +96,15 @@ export default function Shell({ role, children, activeKey }: Props) {
     if (role === "student") {
       return [
         { key: "overview", label: "Overview", href: "/student/dashboard", exact: true },
-        { key: "lessons",  label: "Lessons",  href: "/student/lessons" },
+        { key: "lessons", label: "Lessons", href: "/student/lessons" },
         { key: "messages", label: "Messages", href: "/messages" },
         { key: "settings", label: "Settings", href: "/student/settings" },
       ];
     } else {
       return [
         { key: "overview", label: "Overview", href: "/tutor/dashboard", exact: true },
-        { key: "lessons",  label: "Lessons",  href: "/tutor/lessons" },
+        { key: "lessons", label: "Lessons", href: "/tutor/lessons" },
+        { key: "availability", label: "Availability", href: "/tutor/availability" }, // tutor-only
         { key: "messages", label: "Messages", href: "/messages" },
         { key: "settings", label: "Settings", href: "/tutor/settings" },
       ];
@@ -166,16 +179,16 @@ export default function Shell({ role, children, activeKey }: Props) {
                             className="mr-3 block h-5 w-1.5 rounded-full"
                             style={{ backgroundColor: active ? BRAND.yellow : "transparent" }}
                           />
-                        <span className="truncate">{item.label}</span>
-                        {item.key === "messages" && unreadTotal > 0 && (
-                          <span
-                            className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-slate-900"
-                            style={{ backgroundColor: BRAND.yellow }}
-                            aria-label={`${unreadTotal} unread messages`}
-                          >
-                            {unreadTotal > 99 ? "99+" : unreadTotal}
-                          </span>
-                        )}
+                          <span className="truncate">{item.label}</span>
+                          {item.key === "messages" && unreadTotal > 0 && (
+                            <span
+                              className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-slate-900"
+                              style={{ backgroundColor: BRAND.yellow }}
+                              aria-label={`${unreadTotal} unread messages`}
+                            >
+                              {unreadTotal > 99 ? "99+" : unreadTotal}
+                            </span>
+                          )}
                         </Link>
                       </li>
                     );
