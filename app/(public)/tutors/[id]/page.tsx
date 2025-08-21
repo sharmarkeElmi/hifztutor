@@ -188,17 +188,6 @@ export default function PublicTutorProfilePage() {
     void refreshSlots();
   }
 
-  const dtf = useMemo(
-    () =>
-      new Intl.DateTimeFormat(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    []
-  );
 
   const tf = useMemo(
     () => new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }),

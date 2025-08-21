@@ -11,10 +11,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Shell from "../../components/dashboard/Shell"; // shared dashboard chrome
 
 export default function TutorDashboardPage() {
+  const supabase = createClientComponentClient();
   // =============== Local UI state ===============
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
@@ -110,7 +111,7 @@ export default function TutorDashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [supabase]);
 
   // =============== Sign out ===============
   const handleSignOut = async () => {

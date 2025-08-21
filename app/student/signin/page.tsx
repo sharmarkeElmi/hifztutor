@@ -30,7 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 // =====================
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
 
 // Schema describing valid form values
@@ -42,6 +42,9 @@ type Values = z.infer<typeof schema>;
 
 export default function StudentSignInPage() {
   const router = useRouter();
+
+  // Create a Supabase client for client-side usage
+  const supabase = createClientComponentClient();
 
   // =====================
   // LOCAL UI STATE
@@ -64,26 +67,45 @@ export default function StudentSignInPage() {
   // - On success, perform a *full page load* to /student/dashboard
   //   (ensures auth cookies are present before the dashboard guard runs)
   // =====================
-  const onSubmit = async (values: Values) => {
-    setLoading(true);
-    setError(null);
+const onSubmit = async (values: Values) => {
+  setLoading(true);
+  setError(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword(values);
-
-    setLoading(false);
+  try {
+    // 1) Attempt sign-in
+    const { data, error: signInError } = await supabase.auth.signInWithPassword(values);
+    console.log("[signin] signInWithPassword ->", { user: data?.user, signInError });
 
     if (signInError) {
-      setError(signInError.message);
+      setLoading(false);
+      setError(signInError.message || "Sign in failed.");
       return;
     }
 
-    // Full reload preferred to avoid session race with the dashboard's auth guard
+    // 2) Verify the session exists (cookie-based)
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    console.log("[signin] getSession ->", { session: sessionData?.session, sessionErr });
+
+    if (sessionErr || !sessionData?.session) {
+      setLoading(false);
+      setError("Signed in, but no session was found. Please try again.");
+      return;
+    }
+
+    // 3) Hard redirect to student dashboard (avoids any race with guards)
     if (typeof window !== "undefined") {
-      window.location.assign("/student/dashboard");
+      window.location.href = "/student/dashboard";
     } else {
       router.push("/student/dashboard");
     }
-  };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[signin] unexpected error:", e);
+    setError(msg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // =====================
   // VIEW

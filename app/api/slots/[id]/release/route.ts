@@ -1,55 +1,44 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
-// Server-side Supabase client using request cookies
-async function createSupabase() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
+type RouteParams = { params: { id: string } };
+
+export async function POST(_req: Request, { params }: RouteParams) {
+const cookieStore = cookies(); // no await here
+const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Auth session missing!" }, { status: 401 });
     }
-  );
-}
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const supabase = await createSupabase();
+    const slotId = params.id;
 
-  // Identify user
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-  if (userErr) {
-    return NextResponse.json({ error: userErr.message }, { status: 500 });
+    const { error: upErr } = await supabase
+      .from("lesson_slots")
+      .update({
+        status: "open",
+        held_by: null,
+        hold_expires_at: null,
+      })
+      .eq("id", slotId)
+      .eq("held_by", user.id);
+
+    if (upErr) throw upErr;
+
+    return NextResponse.json({ message: "Slot released" });
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+        ? err
+        : JSON.stringify(err);
+    console.error("Slot release error:", err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const slotId = params.id;
-
-  // Only clear if the current user is the holder (RLS enforces this too)
-  const { error } = await supabase
-    .from("lesson_slots")
-    .update({ held_by: null, hold_expires_at: null })
-    .eq("id", slotId)
-    .eq("held_by", user.id);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ message: "Hold released" });
 }

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header"; // Public navigation bar
 
 // Zod schema for validating email and password inputs
@@ -21,6 +21,7 @@ type Values = z.infer<typeof schema>;
 
 // TutorSignInPage handles tutor sign-in, verifies their role, and redirects accordingly.
 export default function TutorSignInPage() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,32 +37,59 @@ export default function TutorSignInPage() {
     setLoading(true);
     setError(null);
 
-    // Attempt to sign in using Supabase with provided credentials
-    const { error: signInError } = await supabase.auth.signInWithPassword(values);
-    setLoading(false);
+    try {
+      // 1) Attempt sign-in (this will set cookie-based session via auth-helpers client)
+      const { data, error: signInError } = await supabase.auth.signInWithPassword(values);
+      console.log("[tutor signin] signInWithPassword ->", { user: data?.user, signInError });
 
-    if (signInError) {
-      setError(signInError.message);
-      return;
-    }
+      if (signInError) {
+        setLoading(false);
+        setError(signInError.message || "Sign in failed.");
+        return;
+      }
 
-    // Fetch the current user and their profile role
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if (user) {
-      const { data: profile } = await supabase
+      // 2) Verify session exists
+      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+      console.log("[tutor signin] getSession ->", { session: sessionData?.session, sessionErr });
+      if (sessionErr || !sessionData?.session) {
+        setLoading(false);
+        setError("Signed in, but no session was found. Please try again.");
+        return;
+      }
+
+      // 3) Load profile and verify tutor role
+      const user = sessionData.session.user;
+      const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
 
-      // Redirect tutors to their dashboard, otherwise show unauthorized error
-      if (profile?.role === "tutor") {
-        router.push("/tutor/dashboard");
-      } else {
+      if (profErr) {
+        console.error("[tutor signin] load profile error:", profErr);
+        setLoading(false);
+        setError("Could not load your profile. Please try again.");
+        return;
+      }
+
+      if (profile?.role !== "tutor") {
+        setLoading(false);
         setError("You are not authorized to access the tutor dashboard.");
         return;
       }
+
+      // 4) Hard redirect to avoid any guard race
+      if (typeof window !== "undefined") {
+        window.location.href = "/tutor/dashboard";
+      } else {
+        router.push("/tutor/dashboard");
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[tutor signin] unexpected error:", e);
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 

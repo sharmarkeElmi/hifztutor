@@ -29,7 +29,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 // =====================
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 // Describe valid form values for signup
 const schema = z.object({
@@ -41,6 +41,8 @@ type Values = z.infer<typeof schema>;
 
 export default function StudentSignUpPage() {
   const router = useRouter();
+
+  const supabase = createClientComponentClient();
 
   // =====================
   // LOCAL UI STATE

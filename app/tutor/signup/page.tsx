@@ -1,13 +1,13 @@
 "use client";
 
+import Header from "@/app/components/Header"; // Public navigation bar
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import Header from "@/app/components/Header"; // Public navigation bar
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 // -----------------------------
 // Validation schema (Zod)
@@ -23,6 +23,10 @@ type Values = z.infer<typeof schema>;
 
 export default function TutorSignUpPage() {
   const router = useRouter();
+
+  // Cookie-aware Supabase client for client components
+  const supabase = createClientComponentClient();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false); // toggle visibility
@@ -38,10 +42,17 @@ export default function TutorSignUpPage() {
     setLoading(true);
     setError(null);
 
-    // Create auth user
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    // Create auth user with role metadata and redirect after email confirm
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
+      options: {
+        data: { full_name: values.full_name, role: "tutor" },
+        emailRedirectTo:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/tutor/signin?checkEmail=1`
+            : undefined,
+      },
     });
 
     if (signUpError) {
@@ -50,18 +61,28 @@ export default function TutorSignUpPage() {
       return;
     }
 
-    // If we have a user, ensure they have a tutor profile
-    if (data?.user) {
+    // If confirmation is OFF, Supabase may return an active session + user now
+    if (signUpData.session && signUpData.user) {
+      // Ensure profile row exists with correct role
       await supabase.from("profiles").upsert({
-        id: data.user.id,
+        id: signUpData.user.id,
         full_name: values.full_name,
         role: "tutor",
       });
+
+      setLoading(false);
+      // Full reload helps downstream client pages see fresh auth cookie
+      if (typeof window !== "undefined") {
+        window.location.assign("/tutor/dashboard");
+      } else {
+        router.push("/tutor/dashboard");
+      }
+      return;
     }
 
+    // Most setups require email confirmation → send user to sign-in with hint
     setLoading(false);
-    // Send them to tutor sign-in after creating the account
-    router.push("/tutor/signin");
+    router.push("/tutor/signin?checkEmail=1");
   };
 
   return (

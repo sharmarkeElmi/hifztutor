@@ -16,7 +16,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 // 🔧 Include "availability" to match tutor menu
@@ -52,16 +52,19 @@ export default function Shell({ role, children, activeKey }: Props) {
   const [unreadTotal, setUnreadTotal] = useState<number>(0);
 
   // Fetch unread total for sidebar badge (via RPC)
-  const refetchUnread = async () => {
+  const refetchUnread = useCallback(async () => {
     const uid = await getMyId();
-    if (!uid) return setUnreadTotal(0);
+    if (!uid) {
+      setUnreadTotal(0);
+      return;
+    }
     const { data, error } = await supabase.rpc("unread_count_for_user", { uid });
     if (error) {
       console.warn("unread_count_for_user error", error.message);
       return;
     }
     setUnreadTotal(Number(data ?? 0));
-  };
+  }, []);
 
   // Initial load + live updates on messages or read-state changes
   useEffect(() => {
@@ -88,8 +91,7 @@ export default function Shell({ role, children, activeKey }: Props) {
         /* noop */
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refetchUnread]);
 
   // Primary menu (MVP)
   const menu: NavItem[] = useMemo(() => {

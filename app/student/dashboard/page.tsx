@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import DashboardShell from "../../components/dashboard/Shell";
 
 // Placeholder lesson type
@@ -23,6 +23,7 @@ type Lesson = {
 };
 
 export default function StudentDashboardPage() {
+  const supabase = createClientComponentClient();
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export default function StudentDashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [supabase]);
 
   // -------- Placeholder lessons (replace with DB later) --------
   const lessons: Lesson[] = useMemo(() => {

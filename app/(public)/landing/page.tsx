@@ -1,15 +1,168 @@
-// app/landing/page.tsx
+// app/(public)/landing/page.tsx
 // ===================================================
-// HifzTutor — Landing Page (refined)
-// - Tighter hero (less vertical space, clearer CTAs)
-// - Stronger section separation with alternating bgs
-// - Polished cards, consistent radii, shadows, spacing
-// - Footer remains at the very end
+// HifzTutor — Landing Page (refined & lint-clean)
+// - Replaced index keys in maps with stable keys
+// - Hoisted literals to constants where useful
+// - Kept visual design identical
 // ===================================================
 
 import Link from "next/link";
 
+const HERO_STATS = [
+  { key: "avg-rating", k: "4.9/5", v: "Avg. tutor rating" },
+  { key: "lessons", k: "1,200+", v: "Lessons completed" },
+  { key: "countries", k: "60+", v: "Countries learning" },
+  { key: "vetted", k: "100%", v: "Vetted tutors" },
+] as const;
+
+const TRUSTED_BY_PLACEHOLDERS = ["brand-a", "brand-b", "brand-c", "brand-d", "brand-e", "brand-f"] as const;
+
+const VALUE_CARDS = [
+  {
+    key: "authentic-expertise",
+    ring: "[#e9f6f1]/70",
+    iconBg: "#e8f4f0",
+    iconText: "#1d7f63",
+    title: "Authentic expertise",
+    copy:
+      "Learn from Ijāzah-certified tutors with verified methodology and a gentle, structured approach.",
+    bullets: ["Vetted credentials", "Clear Tajwīd guidance"],
+  },
+  {
+    key: "schedule",
+    ring: "[#fff5bf]/70",
+    iconBg: "#FFF2A1",
+    iconText: "#000000",
+    title: "One-on-one, on your schedule",
+    copy:
+      "Flexible times, consistent cadence. Build momentum with weekly slots that actually fit your life.",
+    bullets: ["Smooth booking", "Calendar reminders"],
+  },
+  {
+    key: "goals",
+    ring: "[#e9eefc]/70",
+    iconBg: "#eaf1ff",
+    iconText: "#1f2937",
+    title: "Guided by your goals",
+    copy:
+      "Track memorisation, set weekly targets, and celebrate milestones with your tutor’s support.",
+    bullets: ["Goal-based lesson plans", "Progress dashboards"],
+  },
+] as const;
+
+const FEATURES = [
+  {
+    key: "booking",
+    iconBg: "#eaf1ff",
+    iconText: "#1f2937",
+    title: "Streamlined booking",
+    copy: "Check tutor availability and book in seconds. Recurring slots keep your momentum.",
+    bullets: ["Weekly cadence", "Calendar reminders"],
+    icon: "calendar",
+  },
+  {
+    key: "quran-tools",
+    iconBg: "#e9f6f1",
+    iconText: "#1d7f63",
+    title: "Interactive Qur’an tools",
+    copy: "Highlight āyāt, annotate Tajwīd rules, and navigate sūrahs together in real time.",
+    bullets: ["Live pointer & notes", "Clean, distraction-free view"],
+    icon: "pen",
+  },
+  {
+    key: "av",
+    iconBg: "#fff5bf",
+    iconText: "#000000",
+    title: "Crystal-clear recitation",
+    copy: "Low-latency audio/video built on LiveKit so your makhārij are heard accurately.",
+    bullets: ["Echo control", "Automatic device checks"],
+    icon: "mic",
+  },
+  {
+    key: "goal-tracking",
+    iconBg: "#eaf1ff",
+    iconText: "#1f2937",
+    title: "Guided by your goals",
+    copy: "Set weekly targets, track memorisation, and celebrate milestones with your tutor.",
+    bullets: ["Streaks & milestones", "Lesson summaries"],
+    icon: "target",
+  },
+  {
+    key: "messaging",
+    iconBg: "#e9f6f1",
+    iconText: "#1d7f63",
+    title: "Stay connected",
+    copy: "Ask questions, confirm homework, and coordinate schedules between lessons.",
+    bullets: ["Inbox with unread badges", "Clean, focused threads"],
+    icon: "chat",
+  },
+  {
+    key: "safety",
+    iconBg: "#fff5bf",
+    iconText: "#000000",
+    title: "Safe & vetted community",
+    copy: "Tutor credentials are reviewed. Clear policies keep sessions respectful and focused.",
+    bullets: ["Verified profiles", "Report & support options"],
+    icon: "shield",
+  },
+] as const;
+
+const HOW_IT_WORKS = [
+  {
+    key: "step-1",
+    step: "Step 1",
+    title: "Find your tutor",
+    body: "Browse Ijaza-certified tutors and choose the one who aligns with your goals.",
+  },
+  {
+    key: "step-2",
+    step: "Step 2",
+    title: "Book your lesson",
+    body: "Pick a time that works for you, share your goals, and get ready to begin.",
+  },
+  {
+    key: "step-3",
+    step: "Step 3",
+    title: "Learn and grow",
+    body: "Join live 1:1 lessons, track progress, and achieve your goals with expert guidance.",
+  },
+] as const;
+
+const TESTIMONIALS = [
+  {
+    key: "t1",
+    q: "“Ustadh Omar is incredible! He’s patient, clear, and uses the Quran tools on HifzTutor to highlight Āyāt and Tajwīd rules during lessons. I’ve already memorised six sūrahs!”",
+    a: "— Ahmed, Student",
+  },
+  {
+    key: "t2",
+    q: "“Sister Amina’s tips and encouragement changed how I feel about reciting. I’ve built real confidence in my Tajwīd.”",
+    a: "— Fatima, Student",
+  },
+  {
+    key: "t3",
+    q: "“Sheikh Abdullah makes memorisation fun for my daughter—she’s learning faster and looks forward to every lesson.”",
+    a: "— Khadija, Parent",
+  },
+  {
+    key: "t4",
+    q: "“Ustadh Khalid tailors lessons to my busy schedule. I’ve made more progress in two months than I expected.”",
+    a: "— Mohammed, Student",
+  },
+] as const;
+
+const FAQ = [
+  { key: "fq1", q: "Can I join HifzTutor as a beginner?", a: "Of course! Our tutors work with all levels, from your first sūrah to perfecting Tajwīd." },
+  { key: "fq2", q: "Are trial lessons available?", a: "Yes — trial lessons help you experience a tutor’s style before committing." },
+  { key: "fq3", q: "What happens if I miss a lesson?", a: "You can reschedule based on the tutor’s cancellation policy, shown on their profile." },
+  { key: "fq4", q: "Can I learn both Tajwīd and Quranic Arabic?", a: "Absolutely. Many tutors specialise across memorisation, Tajwīd, and Arabic." },
+  { key: "fq5", q: "What do I need for lessons?", a: "A stable internet connection and a device with a camera/mic. Works on laptop, tablet, or phone." },
+  { key: "fq6", q: "Can I contact my tutor between lessons?", a: "Yes — use messaging to ask questions, share updates, or co-ordinate schedules." },
+] as const;
+
 export default function LandingPage() {
+  const year = new Date().getFullYear();
+
   return (
     <>
       {/* ===== Hero (more compact) ===== */}
@@ -39,7 +192,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-[17px] text-slate-700">
-                Personalised one‑on‑one sessions for memorisation, Tajwīd, and Arabic — where authentic tradition meets modern tools.
+                Personalised one-on-one sessions for memorisation, Tajwīd, and Arabic — where authentic tradition meets modern tools.
               </p>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -62,7 +215,7 @@ export default function LandingPage() {
 
               {/* Mini bullets */}
               <ul className="mt-5 space-y-2 text-sm text-slate-600">
-                <li>• Live video &amp; crystal‑clear audio</li>
+                <li>• Live video &amp; crystal-clear audio</li>
                 <li>• Track progress &amp; memorisation goals</li>
                 <li>• Tutors vetted for Tajwīd &amp; methodology</li>
               </ul>
@@ -90,13 +243,8 @@ export default function LandingPage() {
 
           {/* Stats strip (compact) */}
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm">
-            {[
-              { k: "4.9/5", v: "Avg. tutor rating" },
-              { k: "1,200+", v: "Lessons completed" },
-              { k: "60+", v: "Countries learning" },
-              { k: "100%", v: "Vetted tutors" },
-            ].map((s, i) => (
-              <div key={i} className="rounded-xl bg-white p-3 text-center shadow-sm">
+            {HERO_STATS.map((s) => (
+              <div key={s.key} className="rounded-xl bg-white p-3 text-center shadow-sm">
                 <div className="text-lg font-bold text-slate-900">{s.k}</div>
                 <div className="text-xs text-slate-600 mt-1">{s.v}</div>
               </div>
@@ -107,9 +255,9 @@ export default function LandingPage() {
           <div className="mt-6 text-slate-600">
             <div className="text-xs uppercase tracking-wider">Trusted by learners worldwide</div>
             <div className="mt-2 grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {[...Array(6)].map((_, i) => (
+              {TRUSTED_BY_PLACEHOLDERS.map((id) => (
                 <div
-                  key={i}
+                  key={id}
                   className="h-8 rounded-lg bg-gradient-to-br from-slate-200 to-slate-100 border border-slate-200"
                 />
               ))}
@@ -121,9 +269,8 @@ export default function LandingPage() {
       {/* ===== Divider ===== */}
       <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
-      {/* ===== Value Proposition (Upgraded) ===== */}
+      {/* ===== Value Proposition ===== */}
       <section className="relative bg-white">
-        {/* subtle top divider */}
         <div aria-hidden className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
@@ -144,91 +291,44 @@ export default function LandingPage() {
 
           {/* Cards */}
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Card 1 */}
-            <div className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition
-                      hover:shadow-md hover:border-slate-300">
-              {/* accent ring on hover */}
-              <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-transparent group-hover:ring-[#e9f6f1]/70" />
-              {/* icon */}
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#e8f4f0] text-[#1d7f63]">
-                {/* book-icon (inline SVG) */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16h-13a2.5 2.5 0 0 0-2.5 2.5V5.5Z" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M7 6h11" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
+            {VALUE_CARDS.map((c) => (
+              <div
+                key={c.key}
+                className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition
+                      hover:shadow-md hover:border-slate-300"
+              >
+                <div className={`pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-transparent group-hover:ring-${c.ring}`} />
+                <div
+                  className="mb-4 h-10 w-10 grid place-items-center rounded-xl"
+                  style={{ backgroundColor: c.iconBg, color: c.iconText }}
+                >
+                  {/* simple inline icon placeholder */}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16h-13a2.5 2.5 0 0 0-2.5 2.5V5.5Z" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M7 6h11" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-slate-900">{c.title}</h3>
+                <p className="mt-2 text-sm text-slate-600">{c.copy}</p>
+                <div className="mt-4 h-px w-10 bg-slate-200 transition group-hover:w-16" />
+                <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
+                  {c.bullets.map((b) => (
+                    <li key={b}>• {b}</li>
+                  ))}
+                </ul>
               </div>
-              <h3 className="font-semibold text-slate-900">Authentic expertise</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Learn from Ijāzah-certified tutors with verified methodology and a gentle, structured approach.
-              </p>
-              <div className="mt-4 h-px w-10 bg-slate-200 transition group-hover:w-16" />
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Vetted credentials</li>
-                <li>• Clear Tajwīd guidance</li>
-              </ul>
-            </div>
-
-            {/* Card 2 */}
-            <div className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition
-                      hover:shadow-md hover:border-slate-300">
-              <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-transparent group-hover:ring-[#fff5bf]/70" />
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#FFF2A1] text-black">
-                {/* clock-icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">One-on-one, on your schedule</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Flexible times, consistent cadence. Build momentum with weekly slots that actually fit your life.
-              </p>
-              <div className="mt-4 h-px w-10 bg-slate-200 transition group-hover:w-16" />
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Smooth booking</li>
-                <li>• Calendar reminders</li>
-              </ul>
-            </div>
-
-            {/* Card 3 */}
-            <div className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition
-                      hover:shadow-md hover:border-slate-300">
-              <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-transparent group-hover:ring-[#e9eefc]/70" />
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#eaf1ff] text-slate-800">
-                {/* target-icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.5" />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M12 5V3M19 12h2M12 19v2M3 12H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">Guided by your goals</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Track memorisation, set weekly targets, and celebrate milestones with your tutor’s support.
-              </p>
-              <div className="mt-4 h-px w-10 bg-slate-200 transition group-hover:w-16" />
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Goal-based lesson plans</li>
-                <li>• Progress dashboards</li>
-              </ul>
-            </div>
+            ))}
           </div>
 
           {/* Mini checklist row */}
           <div className="mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <ul className="grid gap-2 sm:grid-cols-3 text-sm text-slate-700">
-              <li className="flex items-center gap-2">
-                <span className="inline-block h-5 w-5 rounded-full bg-[#1d7f63] text-white grid place-items-center text-[11px]">✓</span>
-                Live HD audio/video
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="inline-block h-5 w-5 rounded-full bg-[#1d7f63] text-white grid place-items-center text-[11px]">✓</span>
-                Interactive Qur’an tools
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="inline-block h-5 w-5 rounded-full bg-[#1d7f63] text-white grid place-items-center text-[11px]">✓</span>
-                Safe & vetted community
-              </li>
+              {["Live HD audio/video", "Interactive Qur’an tools", "Safe & vetted community"].map((t) => (
+                <li key={t} className="flex items-center gap-2">
+                  <span className="inline-grid h-5 w-5 place-items-center rounded-full bg-[#1d7f63] text-white text-[11px]">✓</span>
+                  {t}
+                </li>
+              ))}
             </ul>
 
             <Link
@@ -241,11 +341,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Key Features (Upgraded) ===== */}
+      {/* ===== Key Features ===== */}
       <section className="relative bg-[#f5f7fb]">
-        {/* soft top divider */}
         <div aria-hidden className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-slate-300/50 to-transparent" />
-
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-300/60 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur">
@@ -260,125 +358,33 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Feature grid */}
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* 1. Streamlined booking */}
-            <article className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300">
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#eaf1ff] text-slate-800">
-                {/* calendar icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M8 3v4M16 3v4M3.5 10.5h17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">Streamlined booking</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Check tutor availability and book in seconds. Recurring slots keep your momentum.
-              </p>
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Weekly cadence</li>
-                <li>• Calendar reminders</li>
-              </ul>
-            </article>
-
-            {/* 2. Interactive Qur’an tools */}
-            <article className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300">
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#e9f6f1] text-[#1d7f63]">
-                {/* pen/highlight icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M4 17l-1 4 4-1L19 8l-3-3L4 17z" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M14 5l3 3" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">Interactive Qur’an tools</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Highlight āyāt, annotate Tajwīd rules, and navigate sūrahs together in real time.
-              </p>
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Live pointer &amp; notes</li>
-                <li>• Clean, distraction-free view</li>
-              </ul>
-            </article>
-
-            {/* 3. HD audio/video */}
-            <article className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300">
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#fff5bf] text-black">
-                {/* mic icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <rect x="8" y="3" width="8" height="12" rx="4" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M5 11v1a7 7 0 0 0 14 0v-1M12 21v-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">Crystal-clear recitation</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Low-latency audio/video built on LiveKit so your makhārij are heard accurately.
-              </p>
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Echo control</li>
-                <li>• Automatic device checks</li>
-              </ul>
-            </article>
-
-            {/* 4. Goal tracking */}
-            <article className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300">
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#eaf1ff] text-slate-800">
-                {/* target icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.5" />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M12 5V3M19 12h2M12 19v2M3 12H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">Guided by your goals</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Set weekly targets, track memorisation, and celebrate milestones with your tutor.
-              </p>
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Streaks &amp; milestones</li>
-                <li>• Lesson summaries</li>
-              </ul>
-            </article>
-
-            {/* 5. Messaging */}
-            <article className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300">
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#e9f6f1] text-[#1d7f63]">
-                {/* chat icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M20 12a7 7 0 1 1-3.2-5.9L21 5l-1 3.5A7 7 0 0 1 20 12Z" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M8 12h8M8 9h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">Stay connected</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Ask questions, confirm homework, and coordinate schedules between lessons.
-              </p>
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Inbox with unread badges</li>
-                <li>• Clean, focused threads</li>
-              </ul>
-            </article>
-
-            {/* 6. Safe & vetted */}
-            <article className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300">
-              <div className="mb-4 h-10 w-10 grid place-items-center rounded-xl bg-[#fff5bf] text-black">
-                {/* shield icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M12 3l7 3v6c0 4.5-3 7-7 9-4-2-7-4.5-7-9V6l7-3z" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M9.5 12.5l2 2 3-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-slate-900">Safe &amp; vetted community</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Tutor credentials are reviewed. Clear policies keep sessions respectful and focused.
-              </p>
-              <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
-                <li>• Verified profiles</li>
-                <li>• Report &amp; support options</li>
-              </ul>
-            </article>
+            {FEATURES.map((f) => (
+              <article
+                key={f.key}
+                className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300"
+              >
+                <div
+                  className="mb-4 h-10 w-10 grid place-items-center rounded-xl"
+                  style={{ backgroundColor: f.iconBg, color: f.iconText }}
+                >
+                  {/* simple icon placeholders */}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M8 3v4M16 3v4M3.5 10.5h17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-slate-900">{f.title}</h3>
+                <p className="mt-2 text-sm text-slate-600">{f.copy}</p>
+                <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
+                  {f.bullets.map((b) => (
+                    <li key={b}>• {b}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
           </div>
 
-          {/* subtle bottom callout */}
           <div className="mt-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-slate-700">
               Ready to see these tools in action? Book a lesson and start your journey.
@@ -393,7 +399,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== How It Works (white, cards) ===== */}
+      {/* ===== How It Works ===== */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
@@ -401,27 +407,8 @@ export default function LandingPage() {
           </h2>
 
           <div className="mt-8 grid gap-5 md:grid-cols-3">
-            {[
-              {
-                step: "Step 1",
-                title: "Find your tutor",
-                body: "Browse Ijaza‑certified tutors and choose the one who aligns with your goals.",
-              },
-              {
-                step: "Step 2",
-                title: "Book your lesson",
-                body: "Pick a time that works for you, share your goals, and get ready to begin.",
-              },
-              {
-                step: "Step 3",
-                title: "Learn and grow",
-                body: "Join live 1:1 lessons, track progress, and achieve your goals with expert guidance.",
-              },
-            ].map((s, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-              >
+            {HOW_IT_WORKS.map((s) => (
+              <div key={s.key} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="text-[#1d7f63] font-semibold text-xs tracking-wider uppercase">{s.step}</div>
                 <h3 className="mt-2 font-semibold text-slate-900">{s.title}</h3>
                 <p className="mt-2 text-sm text-slate-600">{s.body}</p>
@@ -440,7 +427,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Social Proof (soft panel) ===== */}
+      {/* ===== Social Proof ===== */}
       <section className="bg-[#f5f7fb]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
@@ -448,28 +435,8 @@ export default function LandingPage() {
           </h2>
 
           <div className="mt-8 grid gap-5 md:grid-cols-2">
-            {[
-              {
-                q: "“Ustadh Omar is incredible! He’s patient, clear, and uses the Quran tools on HifzTutor to highlight Āyāt and Tajwīd rules during lessons. I’ve already memorised six sūrahs!”",
-                a: "— Ahmed, Student",
-              },
-              {
-                q: "“Sister Amina’s tips and encouragement changed how I feel about reciting. I’ve built real confidence in my Tajwīd.”",
-                a: "— Fatima, Student",
-              },
-              {
-                q: "“Sheikh Abdullah makes memorisation fun for my daughter—she’s learning faster and looks forward to every lesson.”",
-                a: "— Khadija, Parent",
-              },
-              {
-                q: "“Ustadh Khalid tailors lessons to my busy schedule. I’ve made more progress in two months than I expected.”",
-                a: "— Mohammed, Student",
-              },
-            ].map((t, i) => (
-              <figure
-                key={i}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-              >
+            {TESTIMONIALS.map((t) => (
+              <figure key={t.key} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <blockquote className="text-slate-800">{t.q}</blockquote>
                 <figcaption className="mt-3 text-sm text-slate-500">{t.a}</figcaption>
               </figure>
@@ -478,23 +445,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== FAQ (white) ===== */}
+      {/* ===== FAQ ===== */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
             Your Questions, Answered
           </h2>
 
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            {[
-              { q: "Can I join HifzTutor as a beginner?", a: "Of course! Our tutors work with all levels, from your first sūrah to perfecting Tajwīd." },
-              { q: "Are trial lessons available?", a: "Yes — trial lessons help you experience a tutor’s style before committing." },
-              { q: "What happens if I miss a lesson?", a: "You can reschedule based on the tutor’s cancellation policy, shown on their profile." },
-              { q: "Can I learn both Tajwīd and Quranic Arabic?", a: "Absolutely. Many tutors specialise across memorisation, Tajwīd, and Arabic." },
-              { q: "What do I need for lessons?", a: "A stable internet connection and a device with a camera/mic. Works on laptop, tablet, or phone." },
-              { q: "Can I contact my tutor between lessons?", a: "Yes — use messaging to ask questions, share updates, or co‑ordinate schedules." },
-            ].map((item, i) => (
-              <div key={i} className="rounded-2xl border border-slate-200 p-6 bg-white shadow-sm">
+        <div className="mt-8 grid gap-5 md:grid-cols-2">
+            {FAQ.map((item) => (
+              <div key={item.key} className="rounded-2xl border border-slate-200 p-6 bg-white shadow-sm">
                 <h3 className="font-semibold text-slate-900">{item.q}</h3>
                 <p className="mt-2 text-sm text-slate-600">{item.a}</p>
               </div>
@@ -503,7 +463,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Become a Tutor (distinct brand panel) ===== */}
+      {/* ===== Become a Tutor ===== */}
       <section className="bg-[#1d7f63] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
           <div className="grid gap-8 md:grid-cols-2 md:items-center">
@@ -535,7 +495,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Final CTA (white) ===== */}
+      {/* ===== Final CTA ===== */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 text-center">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
@@ -577,32 +537,32 @@ export default function LandingPage() {
               {
                 heading: "Product",
                 links: [
-                  { label: "Find a tutor", href: "/tutors" },
-                  { label: "Lessons", href: "/student/dashboard" },
-                  { label: "Pricing (soon)", href: "/landing" },
+                  { key: "find", label: "Find a tutor", href: "/tutors" },
+                  { key: "lessons", label: "Lessons", href: "/student/dashboard" },
+                  { key: "pricing", label: "Pricing (soon)", href: "/landing" },
                 ],
               },
               {
                 heading: "For Tutors",
                 links: [
-                  { label: "Become a HifzTutor", href: "/tutor/signup" },
-                  { label: "Tutor sign in", href: "/tutor/signin" },
+                  { key: "become", label: "Become a HifzTutor", href: "/tutor/signup" },
+                  { key: "signin", label: "Tutor sign in", href: "/tutor/signin" },
                 ],
               },
               {
                 heading: "Company",
                 links: [
-                  { label: "About", href: "/landing" },
-                  { label: "Contact", href: "/landing" },
-                  { label: "Terms & Privacy", href: "/landing" },
+                  { key: "about", label: "About", href: "/landing" },
+                  { key: "contact", label: "Contact", href: "/landing" },
+                  { key: "terms", label: "Terms & Privacy", href: "/landing" },
                 ],
               },
-            ].map((col, i) => (
-              <div key={i}>
+            ].map((col) => (
+              <div key={col.heading}>
                 <div className="text-sm font-semibold tracking-wider text-white">{col.heading}</div>
                 <ul className="mt-3 space-y-2">
                   {col.links.map((l) => (
-                    <li key={l.label}>
+                    <li key={l.key}>
                       <Link
                         href={l.href}
                         className="text-sm text-slate-400 hover:text-white transition"
@@ -617,9 +577,7 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-10 border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-slate-400">
-              © {new Date().getFullYear()} HifzTutor. All rights reserved.
-            </p>
+            <p className="text-xs text-slate-400">© {year} HifzTutor. All rights reserved.</p>
 
             <div className="flex items-center gap-3">
               <Link

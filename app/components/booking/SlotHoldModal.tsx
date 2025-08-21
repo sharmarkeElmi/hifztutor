@@ -7,7 +7,7 @@
  *  - lets the user Cancel (calls /release) or Continue (you'll later send them to checkout)
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useReducer } from "react";
 
 type Props = {
   slotId: string | null;
@@ -37,7 +37,7 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
-  const [tick, setTick] = useState(0); // forces re-render each second while counting down
+  const [, forceRender] = useReducer((x) => x + 1, 0);
 
   // Kick off the hold when the modal opens with a valid slotId
   useEffect(() => {
@@ -80,13 +80,13 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
     const mins = Math.floor(diffMs / 1000 / 60);
     const secs = Math.floor((diffMs / 1000) % 60);
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  }, [expiresAt, tick]);
+  }, [expiresAt]);
 
   // Ticker for countdown
   useEffect(() => {
     if (!expiresAt) return;
     const id = setInterval(() => {
-      setTick((t) => t + 1);
+      forceRender();
     }, 1000);
     return () => clearInterval(id);
   }, [expiresAt]);
@@ -119,7 +119,7 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
         <h3 className="text-lg font-semibold">Reserve this time</h3>
 
         <p className="mt-2 text-sm text-gray-600">
-          We’re holding this slot for you while you complete booking.
+          Were holding this slot for you while you complete booking.
           {expiresAt && (
             <>
               {" "}Hold expires in{" "}
