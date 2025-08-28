@@ -8,30 +8,42 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
+// NOTE: for SVGs we prefer a plain <img/> to render the vector exactly as-authored
+// (no layout calculations or rasterisation from next/image are needed here).
 
 const BRAND = {
-  deep: "#0B2526",    // deep green (brand)
-  yellow: "#F7D949",  // brand yellow (primary CTA)
-  accent: "#167584",  // accent teal/green (secondary button)
+  deep: "#111629",    // deep green (brand)
+  yellow: "#F7D250",  // brand yellow (primary CTA)
+  accent: "#D3F501",  // accent teal/green (secondary button)
 };
 
 export default function Header() {
   return (
-    <header className="border-b border-slate-200/60 bg-white">
+    <header className="border-b border-slate-200/60 #111629">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
         {/* Logo */}
-        <Link href="/landing" className="flex items-center gap-3">
-          <span
-            className="grid h-8 w-8 place-items-center rounded-lg shadow-sm ring-1 ring-slate-900/10"
-            style={{ backgroundColor: BRAND.yellow }}
+        <Link href="/landing" aria-label="HifzTutor home" className="flex items-center gap-3">
+          {/* Full wordmark on md+ screens */}
+          <Image
+            src="/logo.svg"
+            alt="HifzTutor"
+            width={156}
+            height={32}
+            priority
+            unoptimized
+            className="hidden md:block select-none"
+          />
+          {/* Compact mark on small screens */}
+          <Image
+            src="/logo-mark.svg"
+            alt=""
             aria-hidden
-          >
-            {/* Placeholder mark — swap with your SVG when ready */}
-            <span className="text-[10px] font-bold text-slate-900">▮▮</span>
-          </span>
-          <span className="text-lg font-extrabold tracking-tight text-slate-900">
-            HifzTutor
-          </span>
+            width={28}
+            height={28}
+            unoptimized
+            className="md:hidden select-none"
+          />
         </Link>
 
         {/* Right-side nav */}
@@ -40,7 +52,7 @@ export default function Header() {
           <Link
             href="/tutors"
             className="rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors"
-            style={{ color: BRAND.accent, borderColor: BRAND.accent }}
+            style={{ color: '#111629', borderColor: '#111629' }}
           >
             Find a HifzTutor
           </Link>
@@ -56,16 +68,17 @@ export default function Header() {
           {/* Sign in */}
           <Link
             href="/student/signin"
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors"
+            style={{ borderColor:BRAND.deep }}
           >
-            Sign in
+            Log in
           </Link>
 
           {/* Primary CTA: Get started */}
           <Link
             href="/student/signup"
             className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-900 hover:opacity-95"
-            style={{ backgroundColor: BRAND.yellow }}
+            style={{ backgroundColor: BRAND.yellow , borderColor:BRAND.deep }}
           >
             Get started
           </Link>

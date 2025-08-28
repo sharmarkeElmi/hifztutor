@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import Shell from "../../components/dashboard/Shell";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+const supabase = createClientComponentClient();
 
 // Mark a conversation as read for the current user (throttled) and broadcast to other pages
 const READ_THROTTLE_MS = 2000;

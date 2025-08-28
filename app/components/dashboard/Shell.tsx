@@ -17,7 +17,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import Image from "next/image";
 
 // 🔧 Include "availability" to match tutor menu
 type NavKey = "overview" | "lessons" | "messages" | "settings" | "availability";
@@ -41,30 +42,30 @@ const BRAND = {
   cool: "#EBF4F6",   // subtle page tint
 };
 
-async function getMyId(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
-}
-
 export default function Shell({ role, children, activeKey }: Props) {
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const pathname = usePathname();
   const router = useRouter();
   const [unreadTotal, setUnreadTotal] = useState<number>(0);
 
   // Fetch unread total for sidebar badge (via RPC)
   const refetchUnread = useCallback(async () => {
-    const uid = await getMyId();
+    // Inline the user lookup to avoid a separate dependency changing every render
+    const { data } = await supabase.auth.getUser();
+    const uid = data.user?.id ?? null;
+
     if (!uid) {
       setUnreadTotal(0);
       return;
     }
-    const { data, error } = await supabase.rpc("unread_count_for_user", { uid });
+
+    const { data: count, error } = await supabase.rpc("unread_count_for_user", { uid });
     if (error) {
       console.warn("unread_count_for_user error", error.message);
       return;
     }
-    setUnreadTotal(Number(data ?? 0));
-  }, []);
+    setUnreadTotal(Number(count ?? 0));
+  }, [supabase]);
 
   // Initial load + live updates on messages or read-state changes
   useEffect(() => {
@@ -91,14 +92,14 @@ export default function Shell({ role, children, activeKey }: Props) {
         /* noop */
       }
     };
-  }, [refetchUnread]);
+  }, [refetchUnread, supabase]);
 
   // Primary menu (MVP)
   const menu: NavItem[] = useMemo(() => {
     if (role === "student") {
       return [
         { key: "overview", label: "Overview", href: "/student/dashboard", exact: true },
-        { key: "lessons", label: "Lessons", href: "/student/lessons" },
+        { key: "lessons", label: "My Lessons", href: "/student/lessons" },
         { key: "messages", label: "Messages", href: "/messages" },
         { key: "settings", label: "Settings", href: "/student/settings" },
       ];
@@ -126,66 +127,93 @@ export default function Shell({ role, children, activeKey }: Props) {
     if (error) console.error("Sign out error:", error.message);
   };
 
+  // Separate main menu items excluding "settings"
+  const mainMenu = menu.filter(item => item.key !== "settings");
+  // Extract the settings item
+  const settingsItem = menu.find(item => item.key === "settings");
+
   return (
     <div
       className="min-h-screen"
       style={{
-        backgroundImage: `radial-gradient(1200px 600px at 10% -10%, ${BRAND.cool} 0%, transparent 60%)`,
-        backgroundColor: "#ffffff",
+        backgroundImage: `radial-gradient(1200px 600px at 10% -10%, 0%, transparent 60%)`,
+        backgroundColor: "#CDD5E0",
       }}
     >
       <div className="mx-auto max-w-[1340px] px-6 py-10 lg:px-8">
         <div className="flex gap-8">
           {/* ================= Sidebar ================= */}
           <aside className="w-[300px] shrink-0 md:w-[320px]">
-            <div className="sticky top-6 rounded-3xl border border-slate-200 bg-white shadow-[0_6px_30px_-12px_rgba(0,0,0,0.12)]">
+            <div className="rounded-3xl border border-slate-100 bg-slate-50 shadow-[0_10px_40px_-18px_rgba(0,0,0,0.20)] h-[90vh] overflow-hidden flex flex-col justify-between">
               {/* Brand strip */}
-              <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-6">
-                {/* Replace this square with your final SVG mark when ready */}
-                <span
-                  className="grid h-12 w-12 place-items-center rounded-xl shadow-sm ring-1 ring-slate-900/10"
-                  style={{ backgroundColor: BRAND.yellow }}
-                  aria-hidden
-                >
-                  <span className="text-slate-900 text-[11px] font-bold leading-none">▮▮</span>
-                </span>
+              <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6 rounded-t-3xl rounded-b-xl" style={{ backgroundColor: "#111629" }}>
+                <div className="shrink-0">
+                  <Image
+                    src="/logo-mark-dark.svg"
+                    alt="Hifztutor"
+                    width={40}
+                    height={40}
+                    priority
+                    className="block"
+                  />
+                </div>
                 <div className="leading-tight">
-                  <p className="text-[18px] font-extrabold tracking-tight text-slate-900">HifzTutor</p>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">
+                  <p className="text-[18px] font-extrabold tracking-tight text-white">HifzTutor</p>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">
                     {role === "tutor" ? "Tutor" : "Student"}
                   </p>
                 </div>
               </div>
 
-              {/* Nav */}
-              <nav className="px-3 py-8">
+              {/* Nav and footer container */}
+              <nav className="flex flex-col justify-between h-full px-3 py-8">
+                {/* Top nav items */}
                 <ul className="space-y-1.5">
-                  {menu.map((item) => {
+                  {mainMenu.map((item) => {
                     const active = isActive(item);
                     return (
+                      /* Tab highlight */
                       <li key={item.href}>
                         <Link
                           href={item.href}
                           aria-current={active ? "page" : undefined}
                           className={[
-                            "group flex items-center rounded-xl px-4 py-3 text-[15px] font-semibold transition-all",
-                            active ? "text-white" : "text-slate-700 hover:text-slate-900",
+                            "group flex items-center rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors duration-200 ease-in-out",
+                            active
+                              ? "text-white"
+                              : "text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40",
                           ].join(" ")}
                           style={{
-                            backgroundColor: active ? BRAND.deep : "transparent",
+                            backgroundColor: active ? "#111629" : "transparent",
                             boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
                           }}
                         >
-                          {/* left accent bar */}
+                          {/* left accent bar with animated hover */}
                           <span
-                            className="mr-3 block h-5 w-1.5 rounded-full"
-                            style={{ backgroundColor: active ? BRAND.yellow : "transparent" }}
+                            className={[
+                              "mr-3 block h-5 rounded-full transition-all duration-200",
+                              // thin bar by default, grows on hover; when active we keep it wider via inline style below
+                              "w-1 group-hover:w-1.5",
+                              // on hover, use brand yellow via Tailwind arbitrary value
+                              "group-hover:bg-[#F7D949]",
+                            ].join(" ")}
+                            style={{ backgroundColor: active ? '#D3F501': "transparent" }}
                           />
+
+                          {item.key === "messages" && (
+                            <Image
+                              src="/messages-icon.svg"
+                              alt="Messages"
+                              width={20}
+                              height={20}
+                              className="shrink-0 mr-2"
+                            />
+                          )}
                           <span className="truncate">{item.label}</span>
                           {item.key === "messages" && unreadTotal > 0 && (
                             <span
-                              className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-slate-900"
-                              style={{ backgroundColor: BRAND.yellow }}
+                              className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold text-slate-900 shadow-sm"
+                              style={{ backgroundColor: '#D3F501' }}
                               aria-label={`${unreadTotal} unread messages`}
                             >
                               {unreadTotal > 99 ? "99+" : unreadTotal}
@@ -197,16 +225,47 @@ export default function Shell({ role, children, activeKey }: Props) {
                   })}
                 </ul>
 
-                {/* Divider */}
-                <div className="mx-4 my-6 h-px bg-slate-100" />
+                {/* Bottom nav with Settings and Sign out */}
+                <div className="mt-4 border-t border-slate-200 pt-4 flex flex-col space-y-2">
+                  {settingsItem && (
+                    <Link
+                      href={settingsItem.href}
+                      aria-current={isActive(settingsItem) ? "page" : undefined}
+                      className={[
+                        "group flex items-center rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors duration-200 ease-in-out",
+                        isActive(settingsItem)
+                          ? "text-white"
+                          : "text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40",
+                      ].join(" ")}
+                      style={{
+                        backgroundColor: isActive(settingsItem) ? "#1B3F3F" : "transparent",
+                        boxShadow: isActive(settingsItem) ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
+                      }}
+                    >
+                      <span
+                        className={[
+                          "mr-3 block h-5 rounded-full transition-all duration-200",
+                          "w-1 group-hover:w-1.5",
+                          "group-hover:bg-[#F7D949]",
+                        ].join(" ")}
+                        style={{ backgroundColor: isActive(settingsItem) ? BRAND.yellow : "transparent" }}
+                      />
+                      <span className="truncate">{settingsItem.label}</span>
+                    </Link>
+                  )}
 
-                {/* Sign out */}
-                <div className="px-3 pb-2">
                   <button
                     onClick={handleSignOut}
-                    className="w-full rounded-xl px-4 py-3 text-left text-[15px] font-semibold text-red-600 transition-colors hover:bg-red-50"
+                    className="group flex items-center gap-2 rounded-xl px-4 py-3 text-[15px] font-semibold text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
                   >
-                    Sign out
+                    <Image
+                      src="/signout-icon.svg"
+                      alt="Sign out"
+                      width={20}
+                      height={20}
+                      className="shrink-0"
+                    />
+                    <span>Sign out</span>
                   </button>
                 </div>
               </nav>
@@ -214,7 +273,7 @@ export default function Shell({ role, children, activeKey }: Props) {
           </aside>
 
           {/* ================= Main content ================= */}
-          <main className="min-w-0 flex-1">
+          <main className="min-w-0 flex-1 h-[90vh]">
             {/* subtle top spacing to echo inspo layout */}
             <div className="mb-4" />
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_6px_30px_-12px_rgba(0,0,0,0.12)] md:p-8">

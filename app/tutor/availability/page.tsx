@@ -12,8 +12,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import Shell from "../../components/dashboard/Shell";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 // Helpers for UI formatting
 const gbFormatter = new Intl.NumberFormat("en-GB", {
@@ -96,6 +96,9 @@ export default function TutorAvailabilityPage() {
     const [creating, setCreating] = useState(false);
     const [err, setErr] = useState<string | null>(null);
 
+    // Create the Supabase client once per component instance (avoids module-scope state issues during HMR)
+    const supabase = useMemo(() => createClientComponentClient(), []);
+
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     // quick helpers
@@ -136,7 +139,7 @@ export default function TutorAvailabilityPage() {
             return;
         }
         setSlots(data as Slot[]);
-    }, []);
+    }, [supabase]);
 
     useEffect(() => {
         let active = true;
@@ -167,7 +170,7 @@ export default function TutorAvailabilityPage() {
         })();
 
         return () => { active = false; };
-    }, [loadSlots]);
+    }, [loadSlots, supabase]);
 
     function fromLocalInputValue(v: string): Date | null {
         if (!v) return null;

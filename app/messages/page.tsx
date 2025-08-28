@@ -14,9 +14,10 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import Shell from "../components/dashboard/Shell";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+const supabase = createClientComponentClient();
 
 // Types for a simple 1:1 conversation schema
 type Conversation = {

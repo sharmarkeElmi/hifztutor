@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type Role = "student" | "tutor";
 
@@ -34,6 +34,9 @@ const general: MenuItem[] = [
 export default function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const [unreadTotal, setUnreadTotal] = useState<number>(0);
+
+  // Scoped, memoized Supabase client (stable ref per component instance)
+  const supabase = useMemo(() => createClientComponentClient(), []);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -82,7 +85,8 @@ export default function Sidebar({ role }: { role: Role }) {
       const total = counts.reduce((a, b) => a + b, 0);
       setUnreadTotal(total);
     };
-  }, []);
+    // include supabase so lint is happy; ref is stable due to useMemo above
+  }, [supabase]);
 
   useEffect(() => {
     // initial load
@@ -106,7 +110,7 @@ export default function Sidebar({ role }: { role: Role }) {
       window.removeEventListener("focus", onFocus);
       supabase.removeChannel(channel);
     };
-  }, [fetchUnread]);
+  }, [fetchUnread, supabase]);
 
   const renderItem = (item: MenuItem) => {
     const active = isActive(item.href);
