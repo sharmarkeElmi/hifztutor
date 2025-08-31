@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: slotId } = await params;
   try {
     // Hand the cookies FUNCTION to the helper (do NOT call cookies() here)
     const supabase = createRouteHandlerClient({ cookies });
@@ -14,7 +18,6 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     const user = auth?.user;
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const slotId = params.id;
     const nowIso = new Date().toISOString();
     const holdForMinutes = 10;
     const expiresIso = new Date(Date.now() + holdForMinutes * 60_000).toISOString();

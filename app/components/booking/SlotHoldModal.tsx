@@ -41,6 +41,18 @@ type SlotSummary = {
   tutor_id: string;
 };
 
+// Response shape for /api/slots/[id]/book
+type BookResp = {
+  error?: string;
+  booking?: { id: string };
+  slot?: {
+    starts_at?: string;
+    ends_at?: string;
+    price_cents?: number | null;
+    tutor_id?: string;
+  };
+};
+
 export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -48,6 +60,7 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
   const [, forceRender] = useReducer((x) => x + 1, 0);
   const [isBooking, setIsBooking] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [held, setHeld] = useState(false);
 
   // Optional slot summary we can show in success state
   const [slotSummary, setSlotSummary] = useState<SlotSummary | null>(null);
@@ -58,31 +71,47 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
   // Kick off the hold when the modal opens with a valid slotId
   useEffect(() => {
     let cancelled = false;
+    if (!open || !slotId) return;
+
+    // reset per-open
+    setLoading(true);
+    setError(null);
+    setExpiresAt(null);
+    setHeld(false);
+    setBookingId(null);
+    setIsBooked(false);
+    setSlotSummary(null);
 
     async function hold() {
-      if (!open || !slotId) return;
-      setLoading(true);
-      setError(null);
-      setExpiresAt(null);
-
       try {
-        const res = await fetch(`/api/slots/${slotId}/hold`, { method: "POST" });
-        const data: HoldResp = await res.json();
+        const res = await fetch(`/api/slots/${slotId}/hold`, {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+        });
+        let data: HoldResp;
+        try {
+          data = await res.json();
+        } catch {
+          data = { error: "Unexpected response while holding the slot." };
+        }
 
         if (cancelled) return;
 
-        if (!res.ok) {
+        if (!res.ok || !("hold_expires_at" in data)) {
           const err = (data as { error?: string });
+          setHeld(false);
           setError(err.error ?? "Failed to hold slot");
-        } else if ("hold_expires_at" in data) {
+        } else {
           setExpiresAt(new Date(data.hold_expires_at));
-          // keep a lightweight snapshot for the success screen
           setSlotSummary({
             starts_at: data.slot.starts_at,
             ends_at: data.slot.ends_at,
             price_cents: data.slot.price_cents ?? null,
             tutor_id: data.slot.tutor_id,
           });
+          setHeld(true);
         }
       } catch {
         setError("Network error while holding the slot.");
@@ -92,7 +121,9 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
     }
 
     hold();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, slotId]);
 
   // Countdown mm:ss
@@ -118,7 +149,12 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
   const handleCancel = async () => {
     if (slotId) {
       try {
-        await fetch(`/api/slots/${slotId}/release`, { method: "POST" });
+        await fetch(`/api/slots/${slotId}/release`, {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+        });
       } catch { /* ignore */ }
     }
     // reset local state on close
@@ -126,6 +162,8 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
     setIsBooked(false);
     setSlotSummary(null);
     setExpiresAt(null);
+    setHeld(false);
+    setError(null);
     onClose();
   };
 
@@ -136,18 +174,44 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
       setError("Hold expired. Please pick the slot again.");
       return;
     }
+
     setIsBooking(true);
     setError(null);
+
     try {
-      const res = await fetch(`/api/slots/${slotId}/book`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        setError((data && data.error) || "Booking failed. Please try again.");
+      const res = await fetch(`/api/slots/${slotId}/book`, {
+        method: "POST",
+        credentials: "include", // ensure auth cookies are sent
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      let data: BookResp;
+      try {
+        data = (await res.json()) as BookResp;
+      } catch {
+        data = { error: "Unexpected response while booking." };
+      }
+
+      if (!res.ok || data?.error) {
+        setError(data?.error || "Booking failed. Please try again.");
         return;
       }
+
       // success shape: { message: "Booked", booking: { id, ... }, slot: { ... } }
-      const bId = data?.booking?.id as string | undefined;
+      const bId = data?.booking?.id;
       if (bId) setBookingId(bId);
+
+      // If API returned slot details, capture them for the success UI
+      if (data.slot && data.slot.starts_at && data.slot.ends_at) {
+        setSlotSummary({
+          starts_at: data.slot.starts_at,
+          ends_at: data.slot.ends_at,
+          price_cents: data.slot.price_cents ?? null,
+          tutor_id: data.slot.tutor_id ?? "",
+        });
+      }
+
       // Switch UI into a success state and stop the countdown
       setIsBooked(true);
       setExpiresAt(null);
@@ -204,6 +268,12 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
               </div>
             )}
 
+            {!loading && !error && !held && (
+              <div className="mt-3 text-xs text-gray-500">
+                Preparing your hold… one moment.
+              </div>
+            )}
+
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 onClick={handleCancel}
@@ -213,7 +283,7 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
               </button>
               <button
                 onClick={handleContinue}
-                disabled={!!error || loading || isBooking || !!bookingId}
+                disabled={!held || !!error || loading || isBooking || !!bookingId}
                 className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 {isBooking ? "Booking…" : "Continue"}

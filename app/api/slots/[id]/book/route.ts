@@ -1,89 +1,112 @@
 // app/api/slots/[id]/book/route.ts
-import "server-only";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+
+type SlotRow = {
+  id: string;
+  tutor_id: string;
+  starts_at: string;
+  ends_at: string;
+  price_cents: number | null;
+  status: string;
+  held_by: string | null;
+  hold_expires_at: string | null;
+};
 
 export async function POST(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createRouteHandlerClient({ cookies });
+  // Next.js 15: await cookies()
+  const cookieStore = await cookies();
 
-  // must be signed in
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: (name: string, value: string, options: CookieOptions) => {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove: (name: string, options: CookieOptions) => {
+          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+        },
+      },
+    }
+  );
+
+  // Auth
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const slotId = params.id;
 
-  // 1) Read slot and verify it's held by this user and still valid
-  const { data: slot, error: fetchErr } = await supabase
-    .from("lesson_slots")
-    .select("id,tutor_id,starts_at,ends_at,price_cents,held_by,hold_expires_at,status")
-    .eq("id", slotId)
-    .single();
-
-  if (fetchErr || !slot) {
-    return NextResponse.json({ error: "Slot not found" }, { status: 404 });
-  }
-
-  // check status/ownership/expiry
-  const now = Date.now();
-  const holdOk =
-    slot.held_by === user.id &&
-    slot.hold_expires_at &&
-    new Date(slot.hold_expires_at).getTime() > now;
-
-  if (!holdOk) {
-    return NextResponse.json(
-      { error: "Hold has expired or you do not own this hold." },
-      { status: 409 }
-    );
-  }
-
-  // 2) UPDATE the slot to booked (do NOT insert or upsert)
-  const { data: updatedSlot, error: updErr } = await supabase
+  // Atomically flip the slot from HELD -> BOOKED if current user holds it and it hasn't expired
+  const nowIso = new Date().toISOString();
+  const { data: slotAfterUpdate, error: upErr } = await supabase
     .from("lesson_slots")
     .update({ status: "booked" })
     .eq("id", slotId)
-    .select("id,tutor_id,starts_at,ends_at,price_cents,status")
-    .single();
+    .eq("held_by", user.id)
+    .eq("status", "held")
+    .gt("hold_expires_at", nowIso)
+    .select("id,tutor_id,starts_at,ends_at,price_cents,status,held_by,hold_expires_at")
+    .single<SlotRow>();
 
-  if (updErr || !updatedSlot) {
-    // If you see an RLS error here, it means the UPDATE wasn’t permitted.
-    // Ensure your policy allows UPDATE when held_by = auth.uid()
-    return NextResponse.json(
-      { error: updErr?.message ?? "Failed to book slot" },
-      { status: 403 }
-    );
+  if (upErr) {
+    return NextResponse.json({ error: upErr.message }, { status: 400 });
+  }
+  if (!slotAfterUpdate) {
+    // Someone else booked it, hold expired, or you didn’t hold it
+    return NextResponse.json({ error: "Slot is not available." }, { status: 409 });
   }
 
-  // 3) Create a booking record for this user
+  // Create booking record
   const { data: booking, error: insErr } = await supabase
     .from("bookings")
     .insert({
-      slot_id: updatedSlot.id,
+      slot_id: slotAfterUpdate.id,
+      tutor_id: slotAfterUpdate.tutor_id,
       student_id: user.id,
-      tutor_id: updatedSlot.tutor_id,
-      starts_at: updatedSlot.starts_at,
-      ends_at: updatedSlot.ends_at,
-      price_cents: updatedSlot.price_cents ?? 0,
-      status: "pending_payment", // or "confirmed" if you want to skip payments for now
+      starts_at: slotAfterUpdate.starts_at,
+      ends_at: slotAfterUpdate.ends_at,
+      price_cents: slotAfterUpdate.price_cents ?? 0,
+      status: "confirmed",
     })
-    .select("id, status, slot_id")
+    .select("id,slot_id,tutor_id,student_id,starts_at,ends_at,price_cents,status,created_at")
     .single();
 
-  if (insErr || !booking) {
-    return NextResponse.json(
-      { error: insErr?.message ?? "Failed to create booking" },
-      { status: 400 }
-    );
+  if (insErr) {
+    // roll back the slot to 'held' so the user can retry (best-effort)
+    await supabase
+      .from("lesson_slots")
+      .update({ status: "held" })
+      .eq("id", slotId)
+      .eq("held_by", user.id)
+      .gt("hold_expires_at", nowIso);
+    return NextResponse.json({ error: insErr.message }, { status: 400 });
   }
 
-  return NextResponse.json(
-    { message: "Booked", booking, slot: updatedSlot },
-    { status: 200 }
-  );
+  // Clear transient hold metadata now that it's booked (best-effort)
+  await supabase
+    .from("lesson_slots")
+    .update({ held_by: null, hold_expires_at: null })
+    .eq("id", slotId);
+
+  return NextResponse.json({
+    message: "Booked",
+    booking,
+    slot: {
+      id: slotAfterUpdate.id,
+      tutor_id: slotAfterUpdate.tutor_id,
+      starts_at: slotAfterUpdate.starts_at,
+      ends_at: slotAfterUpdate.ends_at,
+      price_cents: slotAfterUpdate.price_cents,
+      status: "booked",
+    },
+  });
 }
