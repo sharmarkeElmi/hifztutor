@@ -3,69 +3,48 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
-type RouteParams = { params: { id: string } };
-
-export async function POST(_req: Request, { params }: RouteParams) {
-  // Next.js dynamic cookies API must be awaited in your version
-const cookieStore = cookies(); // no await here
-const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
+export async function POST(_req: Request, { params }: { params: { id: string } }) {
   try {
-    // 1) Require an authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Hand the cookies FUNCTION to the helper (do NOT call cookies() here)
+    const supabase = createRouteHandlerClient({ cookies });
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Auth session missing!" }, { status: 401 });
-    }
+    // Require a signed-in user
+    const { data: auth, error: authErr } = await supabase.auth.getUser();
+    if (authErr) return NextResponse.json({ error: authErr.message }, { status: 401 });
+    const user = auth?.user;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const slotId = params.id;
     const nowIso = new Date().toISOString();
-    const holdUntilIso = new Date(Date.now() + 5 * 60_000).toISOString(); // 5 minutes
+    const holdForMinutes = 10;
+    const expiresIso = new Date(Date.now() + holdForMinutes * 60_000).toISOString();
 
-    // 2) Atomically set the hold if the slot is still open and in the future
-    const { data: slot, error: upErr } = await supabase
+    // Place a hold only if the slot is still available and in the future
+    const { data: slot, error } = await supabase
       .from("lesson_slots")
       .update({
         status: "held",
         held_by: user.id,
-        hold_expires_at: holdUntilIso,
+        hold_expires_at: expiresIso,
       })
       .eq("id", slotId)
-      .eq("status", "open")
+      .eq("status", "available")
       .gt("starts_at", nowIso)
-      .select(
-        "id, tutor_id, starts_at, ends_at, price_cents, status, held_by, hold_expires_at"
-      )
-      .single();
+      .select("*")
+      .maybeSingle();
 
-    if (upErr) {
-      const msg = String(upErr.message ?? upErr);
-      if (msg.includes("No rows")) {
-        return NextResponse.json({ error: "Slot not available" }, { status: 409 });
-      }
-      throw upErr;
-    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     if (!slot) {
-      return NextResponse.json({ error: "Slot not available" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Slot is no longer available. Please pick another time." },
+        { status: 409 }
+      );
     }
 
-    return NextResponse.json({
-      message: "Slot held",
-      slot,
-      hold_expires_at: holdUntilIso,
-    });
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error
-        ? err.message
-        : typeof err === "string"
-        ? err
-        : JSON.stringify(err);
-    console.error("Slot hold error:", err);
+    return NextResponse.json({ slot, hold_expires_at: expiresIso }, { status: 200 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

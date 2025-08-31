@@ -21,7 +21,7 @@ const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     const { error: upErr } = await supabase
       .from("lesson_slots")
       .update({
-        status: "open",
+        status: "available",
         held_by: null,
         hold_expires_at: null,
       })

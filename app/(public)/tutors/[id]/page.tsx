@@ -11,9 +11,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
 import SlotHoldModal from "@/app/components/booking/SlotHoldModal";
+// Browser Supabase client (uses auth cookies automatically)
+const supabase = createClientComponentClient();
 
 type ProfileRow = {
   full_name: string | null;
@@ -112,15 +114,19 @@ export default function PublicTutorProfilePage() {
         setProfile(p);
         setTutor(t ?? null);
 
-        // 3) Open future slots for this tutor (public list)
-        const { data: s, error: sErr } = await supabase
-          .from("lesson_slots")
-          .select("id, starts_at, ends_at, price_cents, status, held_by, hold_expires_at")
-          .eq("tutor_id", tutorId)
-          .eq("status", "open")
-          .gt("starts_at", new Date().toISOString())
-          .order("starts_at", { ascending: true })
-          .limit(20);
+      // Note on statuses:
+      // - "available": can be picked
+      // - "held": temporarily reserved by a student until hold_expires_at
+      // - "booked": purchased; not selectable
+      // We only list "available" here.
+      const { data: s, error: sErr } = await supabase
+        .from("lesson_slots")
+        .select("id, starts_at, ends_at, price_cents, status, held_by, hold_expires_at")
+        .eq("tutor_id", tutorId)
+        .eq("status", "available")
+        .gt("starts_at", new Date().toISOString())
+        .order("starts_at", { ascending: true })
+        .limit(20);
 
         if (sErr) {
           if (!cancelled) {
@@ -168,7 +174,7 @@ export default function PublicTutorProfilePage() {
       .from("lesson_slots")
       .select("id, starts_at, ends_at, price_cents, status, held_by, hold_expires_at")
       .eq("tutor_id", tutorId)
-      .eq("status", "open")
+      .eq("status", "available")
       .gt("starts_at", new Date().toISOString())
       .order("starts_at", { ascending: true })
       .limit(20);
@@ -432,11 +438,15 @@ export default function PublicTutorProfilePage() {
                           {(() => {
                             const now = Date.now();
                             const isHeld =
-                              s.status !== "open" ||
+                              s.status !== "available" ||
                               (s.hold_expires_at ? new Date(s.hold_expires_at).getTime() > now : false);
                             const start = tf.format(new Date(s.starts_at));
                             const price = s.price_cents != null ? `£${(s.price_cents / 100).toFixed(0)}` : "£—";
-                            const label = isHeld ? (s.status === "booked" ? "Booked" : "Held") : "Select";
+                            const label =
+                              s.status === "booked" ? "Booked"
+                              : s.status === "held" ? "Held"
+                              : isHeld ? "Unavailable"
+                              : "Select";
                             return (
                               <button
                                 onClick={() => onPickSlot(s.id)}

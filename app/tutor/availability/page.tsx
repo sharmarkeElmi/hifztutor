@@ -5,8 +5,8 @@
  * -------------------
  * Minimal CRUD UI for lesson_slots:
  * - List future slots you own
- * - Create new future "open" slots
- * - Delete your own "open" future slots
+ * - Create new future "available" slots
+ * - Delete your own "available" future slots
  *
  * Relies on RLS policies you already created.
  */
@@ -78,7 +78,7 @@ type Slot = {
     starts_at: string; // ISO
     ends_at: string;   // ISO
     price_cents: number;
-    status: "open" | "booked" | "cancelled";
+    status: "available" | "held" | "booked" | "canceled";
     room_name: string | null;
     created_at: string;
 };
@@ -262,7 +262,7 @@ export default function TutorAvailabilityPage() {
             starts_at,
             ends_at,
             price_cents: form.priceCents || 0,
-            status: "open",
+            status: "available",
         });
 
         if (error) {
@@ -580,7 +580,7 @@ export default function TutorAvailabilityPage() {
                                 const overlaps = slots.some((s) => {
                                     const S = new Date(s.starts_at);
                                     const E = new Date(s.ends_at);
-                                    return s.status !== "cancelled" && S < end && E > start;
+                                    return s.status !== "canceled" && S < end && E > start;
                                 });
                                 return overlaps ? (
                                     <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -633,7 +633,7 @@ export default function TutorAvailabilityPage() {
                                     </p>
                                     <p className="text-sm text-gray-600 mt-0.5 flex items-center gap-2">
                                         <span
-                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${s.status === "open"
+                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${s.status === "available"
                                                     ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20"
                                                     : s.status === "booked"
                                                         ? "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20"
@@ -648,14 +648,14 @@ export default function TutorAvailabilityPage() {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => handleDelete(s.id)}
-                                        disabled={s.status !== "open" || new Date(s.starts_at) <= new Date()}
-                                        className={`inline-flex items-center rounded px-3 py-1.5 text-sm ${s.status !== "open" || new Date(s.starts_at) <= new Date()
+                                        disabled={s.status !== "available" || new Date(s.starts_at) <= new Date()}
+                                        className={`inline-flex items-center rounded px-3 py-1.5 text-sm ${s.status !== "available" || new Date(s.starts_at) <= new Date()
                                                 ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                                                 : "bg-red-600 text-white hover:bg-red-700"
                                             }`}
                                         title={
-                                            s.status !== "open"
-                                                ? "Only open slots can be deleted"
+                                            s.status !== "available"
+                                                ? "Only available slots can be deleted"
                                                 : new Date(s.starts_at) <= new Date()
                                                     ? "Only future slots can be deleted"
                                                     : "Delete slot"
