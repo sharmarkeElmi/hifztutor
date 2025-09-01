@@ -8,7 +8,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
+import { useMemo } from "react";
 import Header from "@/app/components/Header"; // Public navigation bar
 
 // Zod schema for validating email and password inputs
@@ -21,11 +22,18 @@ type Values = z.infer<typeof schema>;
 
 // TutorSignInPage handles tutor sign-in, verifies their role, and redirects accordingly.
 export default function TutorSignInPage() {
-  const supabase = createClientComponentClient();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false); // toggle visibility
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const { register, handleSubmit, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -99,7 +107,7 @@ export default function TutorSignInPage() {
       <Header />
 
       <section className="max-w-md mx-auto mt-12 space-y-8 bg-white p-8 rounded-lg shadow-md border border-gray-200">
-        <h1 className="text-3xl font-bold text-center font-sans">Tutor — Sign in</h1>
+        <h1 className="text-3xl font-bold text-center font-sans">Tutor — Log In</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Email */}

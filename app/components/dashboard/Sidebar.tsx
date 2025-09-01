@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 type Role = "student" | "tutor";
 
@@ -36,7 +36,14 @@ export default function Sidebar({ role }: { role: Role }) {
   const [unreadTotal, setUnreadTotal] = useState<number>(0);
 
   // Scoped, memoized Supabase client (stable ref per component instance)
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const signOut = async () => {
     await supabase.auth.signOut();

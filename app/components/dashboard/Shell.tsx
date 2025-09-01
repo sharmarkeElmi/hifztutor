@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 
 // 🔧 Include "availability" to match tutor menu
@@ -43,7 +43,14 @@ const BRAND = {
 };
 
 export default function Shell({ role, children, activeKey }: Props) {
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
   const pathname = usePathname();
   const router = useRouter();
   const [unreadTotal, setUnreadTotal] = useState<number>(0);

@@ -1,13 +1,13 @@
 "use client";
 
 import Header from "@/app/components/Header"; // Public navigation bar
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 // -----------------------------
 // Validation schema (Zod)
@@ -25,7 +25,14 @@ export default function TutorSignUpPage() {
   const router = useRouter();
 
   // Cookie-aware Supabase client for client components
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

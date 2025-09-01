@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo, useState, useReducer } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
 type Props = {
   slotId: string | null;
@@ -68,10 +69,20 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
   // Flag once we successfully book (drives success UI)
   const [isBooked, setIsBooked] = useState(false);
 
+  const supabase = useMemo(() =>
+    createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ), []
+  );
+
   // Kick off the hold when the modal opens with a valid slotId
   useEffect(() => {
     let cancelled = false;
     if (!open || !slotId) return;
+
+    // Abort the request if the modal closes/unmounts
+    const controller = new AbortController();
 
     // reset per-open
     setLoading(true);
@@ -84,12 +95,34 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
 
     async function hold() {
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token ?? null;
+
+        console.log('[SlotHoldModal] client effect running:', typeof window !== 'undefined');
+        console.log('[SlotHoldModal] session present:', Boolean(sessionData.session), 'sending bearer:', Boolean(accessToken));
+
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+        console.log('[SlotHoldModal] hold headers keys:', Object.keys(headers));
+
         const res = await fetch(`/api/slots/${slotId}/hold`, {
           method: "POST",
           credentials: "include",
           cache: "no-store",
-          headers: { "Content-Type": "application/json" },
+          headers,
+          signal: controller.signal,
         });
+
+        // Explicit 401 handling to prompt sign-in
+        if (res.status === 401) {
+          if (!cancelled) {
+            setHeld(false);
+            setError("Please sign in to reserve this slot.");
+          }
+          return;
+        }
+
         let data: HoldResp;
         try {
           data = await res.json();
@@ -113,7 +146,11 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
           });
           setHeld(true);
         }
-      } catch {
+      } catch (e: unknown) {
+        // Ignore abort errors from the fetch being cancelled on modal close/unmount
+        if (e instanceof DOMException && e.name === "AbortError") {
+          return;
+        }
         setError("Network error while holding the slot.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -123,8 +160,9 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
     hold();
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [open, slotId]);
+  }, [open, slotId, supabase]);
 
   // Countdown mm:ss
   const countdown = useMemo(() => {
@@ -149,11 +187,19 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
   const handleCancel = async () => {
     if (slotId) {
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token ?? null;
+
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+        console.log('[SlotHoldModal] release headers keys:', Object.keys(headers));
+
         await fetch(`/api/slots/${slotId}/release`, {
           method: "POST",
           credentials: "include",
           cache: "no-store",
-          headers: { "Content-Type": "application/json" },
+          headers,
         });
       } catch { /* ignore */ }
     }
@@ -179,12 +225,27 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
     setError(null);
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token ?? null;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+      console.log('[SlotHoldModal] book headers keys:', Object.keys(headers));
+
       const res = await fetch(`/api/slots/${slotId}/book`, {
         method: "POST",
         credentials: "include", // ensure auth cookies are sent
         cache: "no-store",
-        headers: { "Content-Type": "application/json" },
+        headers,
       });
+
+      // Explicit 401 handling to prompt sign-in
+      if (res.status === 401) {
+        setError("Please sign in to complete booking.");
+        setIsBooking(false);
+        return;
+      }
 
       let data: BookResp;
       try {

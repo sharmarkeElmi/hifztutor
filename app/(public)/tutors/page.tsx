@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Header from "@/app/components/Header";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@supabase/ssr";
 
 /** Row from the public.tutor_directory view */
 type DirectoryRow = {
@@ -34,6 +34,15 @@ export default function TutorsPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rows, setRows] = useState<DirectoryRow[]>([]);
+
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   // UI state
   const [query, setQuery] = useState("");
@@ -67,7 +76,7 @@ export default function TutorsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [supabase]);
 
   const cards: TutorCardData[] = useMemo(() => {
     return rows.map((r) => ({

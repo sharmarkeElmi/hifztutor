@@ -1,20 +1,21 @@
-"use client";
+export const runtime = 'nodejs';
 
 /**
  * Student — Dashboard (clean MVP)
- * - Auth + role guard
+ * - Server-side auth + role guard (Next 15 SSR)
  * - Greeting (full name fallback to email)
  * - Quick actions route to Lessons & Inbox
  * - Next lesson + Upcoming lessons placeholders
  */
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import DashboardShell from "../../components/dashboard/Shell";
 
 // Placeholder lesson type
-type Lesson = {
+ type Lesson = {
   id: string;
   startsAt: string;
   endsAt: string;
@@ -22,79 +23,72 @@ type Lesson = {
   roleOpposite: "Tutor" | "Student";
 };
 
-export default function StudentDashboardPage() {
-  const supabase = createClientComponentClient();
-  const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState<string | null>(null);
-  const [fullName, setFullName] = useState<string | null>(null);
+export default async function StudentDashboardPage() {
+  // Next.js 15: cookies() must be awaited
+  const cookieStore = await cookies();
 
-  // -------- Auth + role guard --------
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: (name: string, value: string, options: CookieOptions) => {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove: (name: string, options: CookieOptions) => {
+          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+        },
+      },
+    }
+  );
 
-      const session = data?.session;
-      if (!session) {
-        window.location.replace("/student/signin");
-        return;
-      }
+  // Auth guard
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) {
+    redirect("/student/signin");
+  }
 
-      const user = session.user;
-      setEmail(user.email ?? null);
+  // Profile + role guard
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", user.id)
+    .maybeSingle<{ full_name: string | null; role: string | null }>();
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, role")
-        .eq("id", user.id)
-        .maybeSingle();
+  const fullName = profile?.full_name ?? null;
+  const role = profile?.role ?? null;
 
-      if (!active) return;
-      setFullName(profile?.full_name ?? null);
-
-      // If they’re not a student, bounce to tutor dashboard
-      if (profile?.role && profile.role !== "student") {
-        window.location.replace("/tutor/dashboard");
-        return;
-      }
-
-      setLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [supabase]);
+  if (role && role !== "student") {
+    redirect("/tutor/dashboard");
+  }
 
   // -------- Placeholder lessons (replace with DB later) --------
-  const lessons: Lesson[] = useMemo(() => {
-    const now = new Date();
-    const dayMs = 24 * 60 * 60 * 1000;
-    const base: Lesson[] = [
-      {
-        id: "lsn_001",
-        startsAt: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-        endsAt: new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString(),
-        withName: "Ustadh Ali",
-        roleOpposite: "Tutor",
-      },
-      {
-        id: "lsn_002",
-        startsAt: new Date(now.getTime() + dayMs + 4 * 60 * 60 * 1000).toISOString(),
-        endsAt: new Date(now.getTime() + dayMs + 5 * 60 * 60 * 1000).toISOString(),
-        withName: "Fatimah",
-        roleOpposite: "Student",
-      },
-      {
-        id: "lsn_003",
-        startsAt: new Date(now.getTime() + 2 * dayMs).toISOString(),
-        endsAt: new Date(now.getTime() + 2 * dayMs + 60 * 60 * 1000).toISOString(),
-        withName: "Yusuf",
-        roleOpposite: "Student",
-      },
-    ];
-    return base.sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
-  }, []);
+  const now = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const lessons: Lesson[] = [
+    {
+      id: "lsn_001",
+      startsAt: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+      endsAt: new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString(),
+      withName: "Ustadh Ali",
+      roleOpposite: "Tutor" as const,
+    },
+    {
+      id: "lsn_002",
+      startsAt: new Date(now.getTime() + dayMs + 4 * 60 * 60 * 1000).toISOString(),
+      endsAt: new Date(now.getTime() + dayMs + 5 * 60 * 60 * 1000).toISOString(),
+      withName: "Fatimah",
+      roleOpposite: "Student" as const,
+    },
+    {
+      id: "lsn_003",
+      startsAt: new Date(now.getTime() + 2 * dayMs).toISOString(),
+      endsAt: new Date(now.getTime() + 2 * dayMs + 60 * 60 * 1000).toISOString(),
+      withName: "Yusuf",
+      roleOpposite: "Student" as const,
+    },
+  ].sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
 
   const nextLesson = lessons[0] ?? null;
 
@@ -108,14 +102,12 @@ export default function StudentDashboardPage() {
     });
 
   // -------- View --------
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
-
   return (
     <DashboardShell role="student">
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-semibold">Student Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {fullName ? fullName : email}</p>
+        <p className="text-muted-foreground">Welcome back, {fullName ? fullName : user.email}</p>
         <p className="text-sm mt-1">
           <Link href="/student/profile" className="text-blue-600 hover:underline">
             Edit profile

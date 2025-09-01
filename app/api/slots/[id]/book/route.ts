@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 // app/api/slots/[id]/book/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -21,6 +23,12 @@ export async function POST(
   // Next.js 15: await cookies()
   const cookieStore = await cookies();
 
+  // Support auth via Authorization header in addition to cookies
+  const authHeader = _req.headers.get('authorization');
+  const bearer = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : null;
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -34,6 +42,7 @@ export async function POST(
           cookieStore.set({ name, value: "", ...options, maxAge: 0 });
         },
       },
+      global: bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : undefined,
     }
   );
 

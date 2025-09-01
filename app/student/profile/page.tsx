@@ -6,8 +6,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-const supabase = createClientComponentClient();
+import { createBrowserClient } from "@supabase/ssr";
+import { useMemo } from "react";
 
 // Defines form validation rules using Zod
 const schema = z.object({
@@ -22,6 +22,15 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -55,7 +64,7 @@ export default function ProfilePage() {
       }
     })();
     return () => { active = false; };
-  }, [router, setValue]);
+  }, [router, setValue, supabase]);
 
   /**
    * Handles saving changes to the profile

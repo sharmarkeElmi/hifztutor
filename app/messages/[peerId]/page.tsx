@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Shell from "../../components/dashboard/Shell";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-const supabase = createClientComponentClient();
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Mark a conversation as read for the current user (throttled) and broadcast to other pages
 const READ_THROTTLE_MS = 2000;
 const lastReadMark: Record<string, number> = {};
 
-async function markConversationRead(conversationId: string, myId: string) {
+async function markConversationRead(supabase: SupabaseClient, conversationId: string, myId: string) {
   const now = Date.now();
   const key = `${conversationId}:${myId}`;
   if (lastReadMark[key] && now - lastReadMark[key] < READ_THROTTLE_MS) {
@@ -62,6 +62,15 @@ export default function ThreadPage() {
   const params = useParams<{ peerId: string }>();
   const peerId = params?.peerId ?? "";
 
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
+
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [role, setRole] = useState<Role>("student");
   const [conv, setConv] = useState<Conversation | null>(null);
@@ -79,7 +88,7 @@ export default function ThreadPage() {
 
   useEffect(() => {
     let mounted = true;
-    const channels: ReturnType<typeof supabase.channel>[] = [];
+    const channels: ReturnType<SupabaseClient["channel"]>[] = [];
 
     (async () => {
       try {
@@ -178,7 +187,7 @@ export default function ThreadPage() {
 
         // Stamp 'read' when we land on the thread
         if (conversation?.id && myId) {
-          markConversationRead(conversation.id, myId);
+          markConversationRead(supabase, conversation.id, myId);
         }
 
         // Realtime for each conv id
@@ -201,7 +210,7 @@ export default function ThreadPage() {
                   conversation?.id &&
                   document.visibilityState === "visible"
                 ) {
-                  queueMicrotask(() => markConversationRead(conversation.id, myId));
+                  queueMicrotask(() => markConversationRead(supabase, conversation.id, myId));
                 }
               }
             )
@@ -218,28 +227,28 @@ export default function ThreadPage() {
       mounted = false;
       channels.forEach((ch) => supabase.removeChannel(ch));
     };
-  }, [peerId, router]);
+  }, [peerId, router, supabase]);
 
 // Mark as read when the tab/window gains focus
 useEffect(() => {
   if (!conv?.id || !me?.id) return;
 
-  const onFocus = () => markConversationRead(conv.id, me.id);
+  const onFocus = () => markConversationRead(supabase, conv.id, me.id);
   window.addEventListener("focus", onFocus);
   return () => window.removeEventListener("focus", onFocus);
-}, [conv?.id, me?.id]);
+}, [conv?.id, me?.id, supabase]);
 
 // Also mark as read when the tab becomes visible (e.g., after switching tabs)
 useEffect(() => {
   if (!conv?.id || !me?.id) return;
   const onVisible = () => {
     if (document.visibilityState === "visible") {
-      markConversationRead(conv.id, me.id);
+      markConversationRead(supabase, conv.id, me.id);
     }
   };
   document.addEventListener("visibilitychange", onVisible);
   return () => document.removeEventListener("visibilitychange", onVisible);
-}, [conv?.id, me?.id]);
+}, [conv?.id, me?.id, supabase]);
 
   const canSend = useMemo(
     () => text.trim().length > 0 && !!conv && !!me && !sending,

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-const supabase = createClientComponentClient();
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function TutorProfilePage() {
   const router = useRouter();
@@ -11,6 +10,15 @@ export default function TutorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   // profiles table
   const [fullName, setFullName] = useState("");
@@ -106,7 +114,7 @@ export default function TutorProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [supabase]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

@@ -12,7 +12,7 @@
  *  - Tutor flow lives separately at /tutor/signin.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 // =====================
@@ -30,7 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 // =====================
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import Header from "@/app/components/Header";
 
 // Schema describing valid form values
@@ -44,7 +44,14 @@ export default function StudentSignInPage() {
   const router = useRouter();
 
   // Create a Supabase client for client-side usage
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   // =====================
   // LOCAL UI STATE
@@ -74,6 +81,7 @@ const onSubmit = async (values: Values) => {
   try {
     // 1) Attempt sign-in
     const { data, error: signInError } = await supabase.auth.signInWithPassword(values);
+    console.log("[signin] document.cookie =>", typeof document !== "undefined" ? document.cookie : "(no document)");
     console.log("[signin] signInWithPassword ->", { user: data?.user, signInError });
 
     if (signInError) {
@@ -115,7 +123,7 @@ const onSubmit = async (values: Values) => {
       <Header />
       <section className="max-w-md mx-auto mt-12 space-y-8 bg-white p-8 rounded-lg shadow-md border border-gray-200">
         {/* Page title */}
-        <h1 className="text-3xl font-bold text-center font-sans">Student — Sign in</h1>
+        <h1 className="text-3xl font-bold text-center font-sans">Student — Log In</h1>
 
         {/* Sign-in form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

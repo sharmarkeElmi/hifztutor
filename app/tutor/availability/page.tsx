@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Shell from "../../components/dashboard/Shell";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 // Helpers for UI formatting
 const gbFormatter = new Intl.NumberFormat("en-GB", {
@@ -97,7 +97,14 @@ export default function TutorAvailabilityPage() {
     const [err, setErr] = useState<string | null>(null);
 
     // Create the Supabase client once per component instance (avoids module-scope state issues during HMR)
-    const supabase = useMemo(() => createClientComponentClient(), []);
+    const supabase = useMemo(
+        () =>
+            createBrowserClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            ),
+        []
+    );
 
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 

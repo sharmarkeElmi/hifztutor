@@ -11,11 +11,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import Header from "@/app/components/Header";
 import SlotHoldModal from "@/app/components/booking/SlotHoldModal";
-// Browser Supabase client (uses auth cookies automatically)
-const supabase = createClientComponentClient();
 
 type ProfileRow = {
   full_name: string | null;
@@ -47,6 +45,15 @@ type SlotRow = {
 export default function PublicTutorProfilePage() {
   const params = useParams<{ id: string }>();
   const tutorId = params?.id;
+
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -145,7 +152,7 @@ export default function PublicTutorProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [tutorId]);
+  }, [tutorId, supabase]);
 
   useEffect(() => {
     let active = true;
@@ -159,7 +166,7 @@ export default function PublicTutorProfilePage() {
       active = false;
       sub.subscription?.unsubscribe?.();
     };
-  }, []);
+  }, [supabase]);
 
   const nextParam = useMemo(() => {
     const qs = searchParams?.toString();

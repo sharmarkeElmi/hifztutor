@@ -9,10 +9,9 @@
  * - Polished: adds a slim header (room, role, name, leave)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-const supabase = createClientComponentClient();
+import { createBrowserClient } from "@supabase/ssr";
 import type { Room as LiveKitRoomType } from "livekit-client";
 import {
   LiveKitRoom,
@@ -179,6 +178,15 @@ function RoomHeader({
 export default function RoomClient({ roomName, livekitUrl }: Props) {
   const router = useRouter();
 
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
+
   // UI state
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -252,7 +260,7 @@ export default function RoomClient({ roomName, livekitUrl }: Props) {
       active = false;
     };
     // IMPORTANT: include `supabase` to satisfy react-hooks/exhaustive-deps
-  }, [roomName, router]);
+  }, [roomName, router, supabase]);
 
   // Loading & error UI
   if (loading) {

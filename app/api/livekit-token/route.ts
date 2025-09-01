@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 // app/api/livekit-token/route.ts
 import { NextResponse } from "next/server";
 import { AccessToken } from "livekit-server-sdk";
@@ -10,13 +12,15 @@ export async function GET(request: Request) {
   const lkKey = process.env.LIVEKIT_API_KEY;
   const lkSecret = process.env.LIVEKIT_API_SECRET;
 
-  console.log("Loaded env vars:", {
-    supabaseUrl: supabaseUrl ? "NEXT_PUBLIC_SUPABASE_URL" : null,
-    supabaseServiceKey: supabaseServiceKey ? "SUPABASE_SERVICE_ROLE_KEY" : null,
-    lkUrl: lkUrl ? "LIVEKIT_URL" : null,
-    lkKey: lkKey ? "LIVEKIT_API_KEY" : null,
-    lkSecret: lkSecret ? "LIVEKIT_API_SECRET" : null,
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("Loaded env vars:", {
+      supabaseUrl: supabaseUrl ? "NEXT_PUBLIC_SUPABASE_URL" : null,
+      supabaseServiceKey: supabaseServiceKey ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+      lkUrl: lkUrl ? "LIVEKIT_URL" : null,
+      lkKey: lkKey ? "LIVEKIT_API_KEY" : null,
+      lkSecret: lkSecret ? "LIVEKIT_API_SECRET" : null,
+    });
+  }
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return NextResponse.json(
@@ -39,7 +43,9 @@ export async function GET(request: Request) {
   const qpToken = url.searchParams.get("access_token");
   const token = bearer || qpToken || null;
 
-  console.log("Bearer token found:", Boolean(token));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("Bearer token found:", Boolean(token));
+  }
 
   if (!token) {
     return NextResponse.json({ error: "Unauthorized: missing token" }, { status: 401 });
@@ -50,7 +56,9 @@ export async function GET(request: Request) {
   const { data: userData, error: userErr } = await admin.auth.getUser(token);
 
   const verified = !userErr && !!userData?.user;
-  console.log("User verification succeeded:", verified);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("User verification succeeded:", verified);
+  }
 
   if (!verified) {
     return NextResponse.json(
@@ -77,7 +85,7 @@ export async function GET(request: Request) {
   const at = new AccessToken(lkKey, lkSecret, {
     identity: username,
     name: displayName ?? undefined,
-    ttl: "2h",
+    ttl: 2 * 60 * 60, // 2 hours in seconds
   });
 
   at.addGrant({

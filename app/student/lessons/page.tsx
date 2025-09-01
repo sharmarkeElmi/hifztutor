@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import Shell from "@/app/components/dashboard/Shell";
 
 // Lightweight types that match your DB columns used below
@@ -44,7 +44,14 @@ function fmt(dtISO: string) {
 }
 
 export default function StudentLessonsPage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [tutorsById, setTutorsById] = useState<Record<string, Profile>>({});

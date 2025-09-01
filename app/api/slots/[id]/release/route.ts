@@ -1,23 +1,40 @@
-// app/api/slots/[id]/release/route.ts
+export const runtime = 'nodejs';
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
-  // Pass an async function so the helper receives a Promise<ReadonlyRequestCookies>
-  const supabase = createRouteHandlerClient({
-    cookies: async () => {
-      // Next 15 requires awaiting cookies() before anyone reads from it
-      return await cookies();
-    },
-  });
+  // Next.js 15: await cookies()
+  const cookieStore = await cookies();
+
+  // Support auth via Authorization header in addition to cookies
+  const authHeader = _req.headers.get('authorization');
+  const bearer = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : null;
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: (name: string, value: string, options: CookieOptions) => {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove: (name: string, options: CookieOptions) => {
+          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+        },
+      },
+      global: bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : undefined,
+    }
+  );
 
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Auth session missing!" }, { status: 401 });
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const slotId = params.id;

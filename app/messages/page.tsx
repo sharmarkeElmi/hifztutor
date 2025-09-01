@@ -16,8 +16,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import Shell from "../components/dashboard/Shell";
 import type { PostgrestError } from "@supabase/supabase-js";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-const supabase = createClientComponentClient();
+import { createBrowserClient } from "@supabase/ssr";
 
 // Types for a simple 1:1 conversation schema
 type Conversation = {
@@ -33,6 +32,15 @@ type MemberRow = {
 };
 
 export default function MessagesInboxPage() {
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
+
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [role, setRole] = useState<"student" | "tutor">("student");
   const [loading, setLoading] = useState(true);
@@ -109,7 +117,7 @@ export default function MessagesInboxPage() {
     } catch (e) {
       console.warn("refetchConversations: unread counts failed", e);
     }
-  }, [me?.id]);
+  }, [me?.id, supabase]);
 
   // ---- Auth + role + load my conversations
   useEffect(() => {
@@ -219,7 +227,7 @@ export default function MessagesInboxPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [supabase]);
 
   // ---- Refetch triggers: window focus + realtime updates to my conversation_members rows
   useEffect(() => {
@@ -250,7 +258,7 @@ export default function MessagesInboxPage() {
       window.removeEventListener("focus", onFocus);
       supabase.removeChannel(ch);
     };
-  }, [me?.id, refetchConversations]);
+  }, [me?.id, refetchConversations, supabase]);
 
   // ---- Also refetch when a thread broadcasts a localStorage "read" ping
   useEffect(() => {

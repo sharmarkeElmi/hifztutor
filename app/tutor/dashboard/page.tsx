@@ -1,147 +1,74 @@
-"use client";
+export const runtime = 'nodejs';
 
 /**
- * Tutor — Dashboard (Shell version)
+ * Tutor — Dashboard (SSR)
  * -----------------------------------------
- * - Uses the shared <Shell role="tutor" activeKey="overview"> to match the
- *   student dashboard layout and sidebar.
- * - Preserves the original auth/role checks and profile self‑healing.
- * - Non‑blocking UI: shows a lightweight loader while checking.
+ * - Server-side Supabase auth + role guard (Next 15)
+ * - Uses shared <Shell role="tutor" activeKey="overview"> for chrome
+ * - Keeps the same greeting + quick actions layout
  */
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import Shell from "../../components/dashboard/Shell"; // shared dashboard chrome
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import Shell from "../../components/dashboard/Shell";
 
-export default function TutorDashboardPage() {
-  const supabase = createClientComponentClient();
-  // =============== Local UI state ===============
-  const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState<string | null>(null);
-  const [fullName, setFullName] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+export default async function TutorDashboardPage() {
+  // Next.js 15: cookies() must be awaited
+  const cookieStore = await cookies();
 
-  // =============== Auth guard + profile load/self‑heal ===============
-  useEffect(() => {
-    let active = true;
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: (name: string, value: string, options: CookieOptions) => {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove: (name: string, options: CookieOptions) => {
+          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+        },
+      },
+    }
+  );
 
-    (async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!active) return;
+  // Auth guard
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) {
+    redirect("/tutor/signin");
+  }
 
-      const session = sessionData?.session;
-      if (!session) {
-        // Not signed in → go to tutor sign‑in
-        window.location.replace("/tutor/signin");
-        return;
-      }
+  // Profile + role guard (self-heal minimal: if role not tutor, redirect to student)
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", user.id)
+    .maybeSingle<{ full_name: string | null; role: string | null }>();
 
-      const user = session.user;
-      setUserId(user.id);
-      setEmail(user.email ?? null);
+  const fullName = profile?.full_name ?? null;
+  const role = profile?.role ?? null;
 
-      const authRole = user.user_metadata?.role as string | undefined;
-      const authFullName =
-        (user.user_metadata?.full_name as string | undefined) ?? null;
+  if (role && role !== "tutor") {
+    // If their profile says student, send them to the student dashboard
+    redirect("/student/dashboard");
+  }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("full_name, role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!active) return;
-
-      if (profileError) {
-        setErrorMsg(profileError.message);
-        setLoading(false);
-        return;
-      }
-
-      // No profile row, but auth metadata says tutor → create it
-      if (!profile && authRole === "tutor") {
-        const { error: upsertErr } = await supabase.from("profiles").upsert({
-          id: user.id,
-          full_name: authFullName,
-          role: "tutor",
-        });
-        if (upsertErr) {
-          setErrorMsg(upsertErr.message);
-          setLoading(false);
-          return;
-        }
-        setFullName(authFullName);
-        setLoading(false);
-        return;
-      }
-
-      // Profile exists but role is not tutor
-      if (profile && profile.role !== "tutor") {
-        if (authRole === "tutor") {
-          const { error: updateErr } = await supabase
-            .from("profiles")
-            .update({ role: "tutor" })
-            .eq("id", user.id);
-          if (updateErr) {
-            setErrorMsg(updateErr.message);
-            setLoading(false);
-            return;
-          }
-          setFullName(profile.full_name ?? authFullName);
-          setLoading(false);
-          return;
-        }
-        // Auth metadata also not tutor → route to student dashboard
-        window.location.replace("/student/dashboard");
-        return;
-      }
-
-      // Final guard — only tutors may view this page
-      if (!profile || profile.role !== "tutor") {
-        window.location.replace("/student/dashboard");
-        return;
-      }
-
-      setFullName(profile?.full_name ?? authFullName);
-      setLoading(false);
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [supabase]);
-
-  // =============== Sign out ===============
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.assign("/tutor/signin");
-  };
-
-  // =============== View ===============
   return (
     <Shell role="tutor" activeKey="overview">
       {/* Header / greeting */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Tutor Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {fullName || email}
-          </p>
-          {errorMsg && (
-            <p className="mt-2 text-sm text-red-600">Profile error: {errorMsg}</p>
-          )}
+          <p className="text-muted-foreground">Welcome back, {fullName || user.email}</p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View public profile — disabled until userId is known */}
+          {/* View public profile */}
           <Link
-            href={userId ? `/tutors/${userId}` : "#"}
-            aria-disabled={!userId}
-            className={`inline-flex items-center rounded-md border px-3 py-2 text-sm ${
-              userId ? "hover:bg-gray-50" : "pointer-events-none opacity-50"
-            }`}
+            href={`/tutors/${user.id}`}
+            className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
           >
             View public profile
           </Link>
@@ -185,25 +112,7 @@ export default function TutorDashboardPage() {
         <p className="text-sm text-muted-foreground">
           You have no lessons scheduled. Accept a booking to get started.
         </p>
-        {/* Later: render lessons from DB with contextual Join buttons */}
       </div>
-
-      {/* Sign out */}
-      <div className="flex justify-end mt-6">
-        <button
-          onClick={handleSignOut}
-          className="bg-red-600 text-white px-3 py-1.5 rounded text-sm hover:bg-red-700"
-        >
-          Sign out
-        </button>
-      </div>
-
-      {/* Lightweight loader overlay when checking session */}
-      {loading && (
-        <div className="fixed inset-0 bg-black/10 backdrop-blur-sm grid place-items-center">
-          <div className="rounded-md bg-white px-4 py-3 text-sm shadow">Checking your tutor access…</div>
-        </div>
-      )}
     </Shell>
   );
 }
