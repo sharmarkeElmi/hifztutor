@@ -1,4 +1,3 @@
-/* app/messages/page.tsx */
 "use client";
 
 /**
@@ -372,11 +371,10 @@ export default function MessagesInboxPage() {
   return (
     <Shell role={role}>
       <section className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Messages</h1>
-          <p className="text-sm text-slate-500">
-            View your conversations and continue where you left off.
-          </p>
+        <div className="relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Messages</h1>
+          <p className="text-slate-600 mt-1">Your private conversations — pick up right where you left off.</p>
+          <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10" style={{ background: '#D3F501' }} />
         </div>
 
         {error && (
@@ -387,20 +385,21 @@ export default function MessagesInboxPage() {
 
         {/* Dev helper: start a conversation (by peer UUID) */}
         <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-sm font-medium">Start a conversation (dev)</p>
+          <p className="text-sm font-medium">Start a conversation <span className="text-xs text-slate-400">(dev)</span></p>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <input
               value={peerIdInput}
               onChange={(e) => setPeerIdInput(e.target.value)}
               placeholder="Peer user UUID (e.g. 8b1e3e9e-...)"
-              className="flex-1 rounded border px-3 py-2 text-sm"
+              className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-[#F7D250]"
             />
             <button
               onClick={handleStartConversationDev}
               disabled={starting || !peerIdInput.trim()}
-              className="rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded px-4 py-2 text-sm font-semibold text-[#111629] disabled:opacity-50"
+              style={{ backgroundColor: '#F7D250' }}
             >
-              {starting ? "Starting…" : "Start"}
+              {starting ? "Starting…" : "Start conversation"}
             </button>
           </div>
           <p className="mt-2 text-xs text-slate-500">
@@ -409,8 +408,8 @@ export default function MessagesInboxPage() {
         </div>
 
         {/* Conversation list */}
-        <div className="rounded-lg border border-slate-200 bg-white">
-          <div className="border-b px-4 py-3">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b px-5 py-3.5">
             <h2 className="text-lg font-semibold">Your conversations</h2>
           </div>
 
@@ -422,29 +421,27 @@ export default function MessagesInboxPage() {
                   className="block px-4 py-3 hover:bg-slate-50"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">
-                        Conversation
-                        <span className="ml-2 text-xs text-slate-400">
-                          #{row.id.slice(0, 8)}…
-                        </span>
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border" style={{ borderColor: '#CDD5E0', background: '#F7F8FA', color: '#111629' }}>
+                        {row.peerId.slice(0, 2).toUpperCase()}
+                      </span>
+                      <div>
+                        <p className="font-medium">Conversation with <span className="text-slate-500">{row.peerId.slice(0, 8)}…</span></p>
+                        <p className="text-xs text-slate-500">Click to open the thread</p>
+                      </div>
                       {unreadMap[row.id] > 0 && (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-yellow-400/90 px-2 py-0.5 text-xs font-semibold text-slate-900">
+                        <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: '#F7D250', color: '#111629' }}>
                           {unreadMap[row.id]}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500">
-                      {row.createdAt.toLocaleString()}
-                    </p>
+                    <p className="text-xs text-slate-500">{row.createdAt.toLocaleString()}</p>
                   </div>
-                  <p className="text-xs text-slate-500">Click to open the thread</p>
                 </Link>
               </li>
             ))}
             {!list.length && (
-              <li className="px-4 py-8 text-center text-sm text-slate-500">
+              <li className="px-6 py-10 text-center text-sm text-slate-500">
                 No conversations yet. Use the form above to start one.
               </li>
             )}

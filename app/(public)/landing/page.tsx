@@ -7,6 +7,7 @@
 // ===================================================
 
 import Link from "next/link";
+import Footer from "@/app/components/Footer";
 
 const HERO_STATS = [
   { key: "avg-rating", k: "4.9/5", v: "Avg. tutor rating" },
@@ -161,18 +162,21 @@ const FAQ = [
 ] as const;
 
 export default function LandingPage() {
-  const year = new Date().getFullYear();
 
   return (
     <>
       {/* ===== Hero (more compact) ===== */}
       <section className="relative isolate">
-        {/* Background: soft vertical gradient + subtle grid overlay */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white via-[#fafafa] to-[#eef2f7]" />
+        {/* Background: bold colorful gradient + soft blobs + subtle grid */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#fffbe6] via-[#fffdf2] to-[#f0fff4]" />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_60%_at_50%_20%,black,transparent)] bg-[linear-gradient(to_right,rgba(2,6,23,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(2,6,23,0.06)_1px,transparent_1px)] bg-[size:28px_28px]"
+          className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(70%_70%_at_50%_20%,black,transparent)] bg-[linear-gradient(to_right,rgba(17,22,41,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(17,22,41,0.06)_1px,transparent_1px)] bg-[size:28px_28px]"
         />
+        {/* Color blobs */}
+        <div aria-hidden className="absolute -top-10 -left-10 h-56 w-56 rounded-full blur-3xl opacity-40" style={{ background: '#F7D250' }} />
+        <div aria-hidden className="absolute top-10 right-0 h-56 w-56 rounded-full blur-3xl opacity-30" style={{ background: '#D3F501' }} />
+        <div aria-hidden className="absolute bottom-0 left-1/3 h-56 w-56 rounded-full blur-3xl opacity-20" style={{ background: '#1d7f63' }} />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
           <div className="grid items-center gap-10 lg:grid-cols-12">
@@ -183,12 +187,14 @@ export default function LandingPage() {
                 Live 1:1 lessons with vetted tutors
               </div>
 
-              <h1 className="mt-4 text-4xl sm:text-[40px] font-extrabold leading-[1.1] tracking-tight">
-                <span className="bg-gradient-to-br from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <h1 className="mt-4 text-4xl sm:text-[44px] font-extrabold leading-[1.08] tracking-tight">
+                <span className="bg-gradient-to-br from-[#F7D250] via-[#D3F501] to-[#1d7f63] bg-clip-text text-transparent">
                   Master Qur’an memorisation
                 </span>
                 <br />
-                <span className="text-slate-700">with trusted Hifz tutors</span>
+                <span className="bg-gradient-to-br from-[#111629] via-[#475569] to-[#111629] bg-clip-text text-transparent">
+                  with trusted Hifz tutors
+                </span>
               </h1>
 
               <p className="mt-4 max-w-2xl text-[17px] text-slate-700">
@@ -199,7 +205,7 @@ export default function LandingPage() {
                 {/* Primary CTA — brand yellow */}
                 <Link
                   href="/student/signup"
-                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold text-black bg-[#FFD600] shadow-[0_6px_20px_rgba(255,214,0,0.35)] transition hover:translate-y-[-1px] hover:shadow-[0_10px_26px_rgba(255,214,0,0.45)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600]"
+                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold text-[#111629] bg-[#F7D250] shadow-[0_8px_28px_rgba(247,210,80,0.45)] transition hover:translate-y-[-1px] hover:shadow-[0_14px_34px_rgba(247,210,80,0.55)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F7D250]"
                 >
                   Get started
                 </Link>
@@ -207,7 +213,7 @@ export default function LandingPage() {
                 {/* Secondary CTA — outline */}
                 <Link
                   href="/tutors"
-                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold border border-slate-300 text-slate-800 bg-white/90 backdrop-blur hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-300"
+                  className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold border border-[#CDD5E0] text-[#111629] bg-white/90 backdrop-blur hover:bg-[#F7D250]/90 hover:text-[#111629] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#CDD5E0]"
                 >
                   Find a HifzTutor
                 </Link>
@@ -224,7 +230,7 @@ export default function LandingPage() {
             {/* Right: visual placeholder card (tighter) */}
             <div className="lg:col-span-6 xl:col-span-5 relative">
               <div className="relative mx-auto w-full max-w-lg">
-                <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-xl backdrop-blur">
+                <div className="rounded-2xl border border-transparent bg-white/90 shadow-xl backdrop-blur [background:linear-gradient(white,white)_padding-box,linear-gradient(135deg,#F7D250,#D3F501,#1d7f63)_border-box]">
                   <div className="aspect-[4/3] grid place-items-center">
                     <div className="text-center px-6">
                       <div className="text-xs uppercase tracking-wider text-slate-500">Preview</div>
@@ -234,7 +240,10 @@ export default function LandingPage() {
                   </div>
                 </div>
                 {/* Accent badge */}
-                <div className="absolute -top-3 -right-3 rounded-full bg-[#1d7f63] text-white text-xs font-semibold px-3 py-1 shadow">
+                <div
+                  className="absolute -top-3 -right-3 rounded-full text-[#111629] text-xs font-semibold px-3 py-1 shadow"
+                  style={{ background: 'linear-gradient(135deg, #F7D250, #D3F501)' }}
+                >
                   Live lessons
                 </div>
               </div>
@@ -242,10 +251,10 @@ export default function LandingPage() {
           </div>
 
           {/* Stats strip (compact) */}
-          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm">
+          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-2xl border border-[#CDD5E0] bg-white/80 p-3 shadow-sm">
             {HERO_STATS.map((s) => (
-              <div key={s.key} className="rounded-xl bg-white p-3 text-center shadow-sm">
-                <div className="text-lg font-bold text-slate-900">{s.k}</div>
+              <div key={s.key} className="rounded-xl border border-[#CDD5E0] bg-white p-3 text-center shadow-sm">
+                <div className="text-lg font-bold text-[#111629]">{s.k}</div>
                 <div className="text-xs text-slate-600 mt-1">{s.v}</div>
               </div>
             ))}
@@ -255,12 +264,12 @@ export default function LandingPage() {
           <div className="mt-6 text-slate-600">
             <div className="text-xs uppercase tracking-wider">Trusted by learners worldwide</div>
             <div className="mt-2 grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {TRUSTED_BY_PLACEHOLDERS.map((id) => (
-                <div
-                  key={id}
-                  className="h-8 rounded-lg bg-gradient-to-br from-slate-200 to-slate-100 border border-slate-200"
-                />
-              ))}
+            {TRUSTED_BY_PLACEHOLDERS.map((id) => (
+              <div
+                key={id}
+                className="h-8 rounded-lg bg-gradient-to-br from-[#F7F8FA] to-white border border-[#CDD5E0]"
+              />
+            ))}
             </div>
           </div>
         </div>
@@ -283,6 +292,7 @@ export default function LandingPage() {
             <h2 className="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
               Your journey to master the Qur’an starts here
             </h2>
+            <div className="mt-2 h-1 w-16 rounded-full bg-[#F7D250]" />
             <p className="mt-3 text-slate-700 max-w-2xl">
               Learn with Ijāzah-certified tutors in focused 1:1 sessions. Every lesson blends Qur’anic tradition with modern,
               distraction-free tools designed for memorisation, Tajwīd, and confident recitation.
@@ -294,8 +304,7 @@ export default function LandingPage() {
             {VALUE_CARDS.map((c) => (
               <div
                 key={c.key}
-                className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition
-                      hover:shadow-md hover:border-slate-300"
+                className="group relative rounded-2xl border border-[#CDD5E0] bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#CDD5E0]"
               >
                 <div className={`pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-transparent group-hover:ring-${c.ring}`} />
                 <div
@@ -321,7 +330,7 @@ export default function LandingPage() {
           </div>
 
           {/* Mini checklist row */}
-          <div className="mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-[#CDD5E0] bg-white p-4 shadow-sm">
             <ul className="grid gap-2 sm:grid-cols-3 text-sm text-slate-700">
               {["Live HD audio/video", "Interactive Qur’an tools", "Safe & vetted community"].map((t) => (
                 <li key={t} className="flex items-center gap-2">
@@ -362,7 +371,7 @@ export default function LandingPage() {
             {FEATURES.map((f) => (
               <article
                 key={f.key}
-                className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-slate-300"
+                className="group relative rounded-2xl border border-[#CDD5E0] bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#CDD5E0]"
               >
                 <div
                   className="mb-4 h-10 w-10 grid place-items-center rounded-xl"
@@ -385,13 +394,13 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div className="mt-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="mt-10 rounded-xl border border-[#CDD5E0] bg-white p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-slate-700">
               Ready to see these tools in action? Book a lesson and start your journey.
             </p>
             <Link
               href="/student/signup"
-              className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-black bg-[#FFD600] shadow-[0_6px_20px_rgba(255,214,0,0.35)] hover:translate-y-[-1px] hover:shadow-[0_10px_26px_rgba(255,214,0,0.45)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600]"
+              className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-[#111629] bg-[#F7D250] shadow-[0_6px_20px_rgba(247,210,80,0.35)] hover:translate-y-[-1px] hover:shadow-[0_10px_26px_rgba(247,210,80,0.45)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F7D250]"
             >
               Get started
             </Link>
@@ -408,7 +417,7 @@ export default function LandingPage() {
 
           <div className="mt-8 grid gap-5 md:grid-cols-3">
             {HOW_IT_WORKS.map((s) => (
-              <div key={s.key} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div key={s.key} className="rounded-2xl border border-[#CDD5E0] bg-white p-6 shadow-sm">
                 <div className="text-[#1d7f63] font-semibold text-xs tracking-wider uppercase">{s.step}</div>
                 <h3 className="mt-2 font-semibold text-slate-900">{s.title}</h3>
                 <p className="mt-2 text-sm text-slate-600">{s.body}</p>
@@ -436,7 +445,7 @@ export default function LandingPage() {
 
           <div className="mt-8 grid gap-5 md:grid-cols-2">
             {TESTIMONIALS.map((t) => (
-              <figure key={t.key} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <figure key={t.key} className="rounded-2xl border border-[#CDD5E0] bg-white p-6 shadow-sm">
                 <blockquote className="text-slate-800">{t.q}</blockquote>
                 <figcaption className="mt-3 text-sm text-slate-500">{t.a}</figcaption>
               </figure>
@@ -454,7 +463,7 @@ export default function LandingPage() {
 
         <div className="mt-8 grid gap-5 md:grid-cols-2">
             {FAQ.map((item) => (
-              <div key={item.key} className="rounded-2xl border border-slate-200 p-6 bg-white shadow-sm">
+              <div key={item.key} className="rounded-2xl border border-[#CDD5E0] p-6 bg-white shadow-sm">
                 <h3 className="font-semibold text-slate-900">{item.q}</h3>
                 <p className="mt-2 text-sm text-slate-600">{item.a}</p>
               </div>
@@ -504,7 +513,7 @@ export default function LandingPage() {
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/student/signup"
-              className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold text-black bg-[#FFD600] shadow-[0_6px_20px_rgba(255,214,0,0.35)] transition hover:translate-y-[-1px] hover:shadow-[0_10px_26px_rgba(255,214,0,0.45)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600]"
+              className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold text-[#111629] bg-[#F7D250] shadow-[0_6px_20px_rgba(247,210,80,0.35)] transition hover:translate-y-[-1px] hover:shadow-[0_10px_26px_rgba(247,210,80,0.45)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F7D250]"
             >
               Get started
             </Link>
@@ -522,80 +531,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== Footer ===== */}
-      <footer className="relative isolate bg-[#0f172a] text-slate-300">
-        <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-b from-transparent to-[#0f172a]" />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <div className="text-white font-extrabold text-xl">HifzTutor</div>
-              <p className="mt-3 text-sm text-slate-400">
-                Learn the Qur’an with trusted tutors. Personalised 1:1 lessons for memorisation, Tajwīd, and Arabic.
-              </p>
-            </div>
-
-            {[
-              {
-                heading: "Product",
-                links: [
-                  { key: "find", label: "Find a tutor", href: "/tutors" },
-                  { key: "lessons", label: "Lessons", href: "/student/dashboard" },
-                  { key: "pricing", label: "Pricing (soon)", href: "/landing" },
-                ],
-              },
-              {
-                heading: "For Tutors",
-                links: [
-                  { key: "become", label: "Become a HifzTutor", href: "/tutor/signup" },
-                  { key: "signin", label: "Tutor sign in", href: "/tutor/signin" },
-                ],
-              },
-              {
-                heading: "Company",
-                links: [
-                  { key: "about", label: "About", href: "/landing" },
-                  { key: "contact", label: "Contact", href: "/landing" },
-                  { key: "terms", label: "Terms & Privacy", href: "/landing" },
-                ],
-              },
-            ].map((col) => (
-              <div key={col.heading}>
-                <div className="text-sm font-semibold tracking-wider text-white">{col.heading}</div>
-                <ul className="mt-3 space-y-2">
-                  {col.links.map((l) => (
-                    <li key={l.key}>
-                      <Link
-                        href={l.href}
-                        className="text-sm text-slate-400 hover:text-white transition"
-                      >
-                        {l.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-slate-400">© {year} HifzTutor. All rights reserved.</p>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/student/signup"
-                className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold text-black bg-[#FFD600] hover:brightness-95 transition"
-              >
-                Get started
-              </Link>
-              <Link
-                href="/tutor/signup"
-                className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold text-white border border-white/20 hover:bg-white/10 transition"
-              >
-                Become a tutor
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }

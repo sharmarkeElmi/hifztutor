@@ -58,7 +58,7 @@ export default async function TutorDashboardPage() {
   return (
     <Shell role="tutor" activeKey="overview">
       {/* Header / greeting */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-6 relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Tutor Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {fullName || user.email}</p>
@@ -68,7 +68,7 @@ export default async function TutorDashboardPage() {
           {/* View public profile */}
           <Link
             href={`/tutors/${user.id}`}
-            className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+            className="inline-flex items-center rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-gray-50"
           >
             View public profile
           </Link>
@@ -76,20 +76,23 @@ export default async function TutorDashboardPage() {
           {/* Edit tutor profile */}
           <Link
             href="/tutor/profile"
-            className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#111629] shadow-sm"
+            style={{ backgroundColor: '#F7D250' }}
           >
             Edit profile
           </Link>
         </div>
+        <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10" style={{ background: '#D3F501' }} />
       </div>
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-lg border p-4 bg-white">
-          <h2 className="font-medium mb-2">Quick actions</h2>
+          <h2 className="font-medium mb-2">Actions</h2>
           <Link
             href="/lesson/join"
-            className="inline-flex items-center justify-center rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            className="inline-flex items-center justify-center rounded px-4 py-2 text-[#111629]"
+            style={{ backgroundColor: '#F7D250' }}
           >
             Join a live lesson
           </Link>
@@ -98,11 +101,11 @@ export default async function TutorDashboardPage() {
         {/* Placeholder cards to make the grid feel balanced; can be filled later */}
         <div className="rounded-lg border p-4 bg-white">
           <h3 className="font-medium mb-1">Today</h3>
-          <p className="text-sm text-muted-foreground">No lessons scheduled.</p>
+          <p className="text-sm text-muted-foreground">No lessons scheduled.<br />Stay available to receive bookings.</p>
         </div>
         <div className="rounded-lg border p-4 bg-white">
           <h3 className="font-medium mb-1">Earnings</h3>
-          <p className="text-sm text-muted-foreground">Coming soon.</p>
+          <p className="text-sm text-muted-foreground">Coming soon — track payouts and hourly totals.</p>
         </div>
       </div>
 

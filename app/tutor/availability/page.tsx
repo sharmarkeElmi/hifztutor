@@ -298,11 +298,10 @@ export default function TutorAvailabilityPage() {
 
     return (
         <Shell role="tutor" activeKey="availability">
-            <div className="mb-6">
-                <h1 className="text-2xl font-semibold">Availability</h1>
-                <p className="text-muted-foreground">
-                    Publish bookable time slots for students to reserve.
-                </p>
+            <div className="relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Availability</h1>
+                <p className="text-slate-600 mt-1">Publish bookable time slots for students to reserve.</p>
+                <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10" style={{ background: '#D3F501' }} />
             </div>
 
             <form
@@ -333,6 +332,7 @@ export default function TutorAvailabilityPage() {
                                 className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
                                 aria-label="Previous month"
                                 title="Previous month"
+                                style={{ color: '#111629' }}
                             >
                                 ‹
                             </button>
@@ -343,6 +343,7 @@ export default function TutorAvailabilityPage() {
                                 className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
                                 aria-label="Next month"
                                 title="Next month"
+                                style={{ color: '#111629' }}
                             >
                                 ›
                             </button>
@@ -375,11 +376,11 @@ export default function TutorAvailabilityPage() {
                                             className={[
                                                 "relative h-12 border-t",
                                                 i % 7 !== 6 ? "border-r" : "",
-                                                disabled ? "cursor-not-allowed text-gray-300" : "hover:bg-emerald-50",
+                                                disabled ? "cursor-not-allowed text-gray-300" : "hover:bg-[#F7F8FA]",
                                                 isCurrentMonth ? "bg-white" : "bg-gray-50",
-                                                selected ? "bg-emerald-100 text-emerald-800 font-medium ring-1 ring-emerald-300" : "",
-                                                todayCell && !selected ? "ring-1 ring-emerald-200" : "",
-                                                "focus:outline-none focus:ring-2 focus:ring-emerald-500",
+                                                selected ? "bg-[#F7D250] text-[#111629] font-medium ring-1 ring-[#F7D250]" : "",
+                                                todayCell && !selected ? "ring-1 ring-[#D3F501]" : "",
+                                                "focus:outline-none focus:ring-2 focus:ring-[#F7D250]",
                                             ].join(" ")}
                                         >
                                             <span className="text-sm">{d.getDate()}</span>
@@ -396,7 +397,7 @@ export default function TutorAvailabilityPage() {
                         <div className="mt-3">
                           <label htmlFor="start-time" className="mb-1 block text-sm font-medium">Start time</label>
                           <div className="flex flex-wrap items-center gap-2">
-                            <input
+                          <input
                               id="start-time"
                               type="time"
                               step={900}
@@ -415,7 +416,7 @@ export default function TutorAvailabilityPage() {
                                 );
                                 setForm((f) => ({ ...f, startsAtLocal: toLocalInputValue(next) }));
                               }}
-                              className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
                               aria-label="Start time"
                             />
 
@@ -424,7 +425,7 @@ export default function TutorAvailabilityPage() {
                               <button
                                 type="button"
                                 onClick={() => bumpStart(-15)}
-                                className="rounded-full border px-2 py-1 text-xs hover:bg-gray-50"
+                                className="rounded-full border px-2 py-1 text-xs hover:bg-[#F7F8FA]"
                                 title="Back 15 minutes"
                               >
                                 −15m
@@ -432,7 +433,7 @@ export default function TutorAvailabilityPage() {
                               <button
                                 type="button"
                                 onClick={() => bumpStart(15)}
-                                className="rounded-full border px-2 py-1 text-xs hover:bg-gray-50"
+                                className="rounded-full border px-2 py-1 text-xs hover:bg-[#F7F8FA]"
                                 title="Forward 15 minutes"
                               >
                                 +15m
@@ -440,7 +441,7 @@ export default function TutorAvailabilityPage() {
                               <button
                                 type="button"
                                 onClick={() => bumpStart(60)}
-                                className="rounded-full border px-2 py-1 text-xs hover:bg-gray-50"
+                                className="rounded-full border px-2 py-1 text-xs hover:bg-[#F7F8FA]"
                                 title="Forward 1 hour"
                               >
                                 +1h
@@ -448,7 +449,7 @@ export default function TutorAvailabilityPage() {
                               <button
                                 type="button"
                                 onClick={setNextHalfHour}
-                                className="rounded-full border px-2 py-1 text-xs hover:bg-gray-50"
+                                className="rounded-full border px-2 py-1 text-xs hover:bg-[#F7F8FA]"
                                 title="Jump to next half‑hour"
                               >
                                 Next 30m
@@ -464,7 +465,7 @@ export default function TutorAvailabilityPage() {
                                 setForm((f) => ({ ...f, startsAtLocal: toLocalInputValue(next) }));
                                 setCalMonth(new Date(next.getFullYear(), next.getMonth(), 1));
                               }}
-                              className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                              className="rounded-md border px-2 py-1 text-xs hover:bg-[#F7F8FA]"
                               title="Same time tomorrow"
                             >
                               Tomorrow
@@ -476,7 +477,7 @@ export default function TutorAvailabilityPage() {
                                 resetForm();
                                 setCalMonth(new Date());
                               }}
-                              className="ml-auto rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                              className="ml-auto rounded-md border px-2 py-1 text-xs hover:bg-[#F7F8FA]"
                             >
                               Reset
                             </button>
@@ -503,7 +504,7 @@ export default function TutorAvailabilityPage() {
                                         setForm((f) => ({ ...f, durationMins: Number(e.target.value) || 30 }))
                                     }
                                     aria-label="Duration in minutes"
-                                    className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
                                 />
                                 <div className="mt-2 flex flex-wrap gap-2">
                                     {[30, 45, 60, 90].map((m) => (
@@ -514,7 +515,7 @@ export default function TutorAvailabilityPage() {
                                             className={[
                                                 "rounded-full border px-3 py-1 text-xs",
                                                 "hover:bg-gray-50",
-                                                form.durationMins === m ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "",
+                                                form.durationMins === m ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]" : "",
                                             ].join(" ")}
                                         >
                                             {m}m
@@ -535,7 +536,7 @@ export default function TutorAvailabilityPage() {
                                         setForm((f) => ({ ...f, priceCents: Number(e.target.value) || 0 }))
                                     }
                                     aria-label="Price in pence"
-                                    className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
                                 />
                                 <div className="mt-2 flex flex-wrap gap-2">
                                     {[0, 500, 1000, 1500, 2000, 2500].map((c) => (
@@ -546,7 +547,7 @@ export default function TutorAvailabilityPage() {
                                             className={[
                                                 "rounded-full border px-3 py-1 text-xs",
                                                 "hover:bg-gray-50",
-                                                form.priceCents === c ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "",
+                                                form.priceCents === c ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]" : "",
                                             ].join(" ")}
                                         >
                                             {gbFormatter.format(c / 100)}
@@ -556,23 +557,23 @@ export default function TutorAvailabilityPage() {
                             </div>
 
                             {/* Live summary */}
-                            <div className="rounded-lg border bg-gray-50 px-3 py-2 text-sm">
+                            <div className="rounded-lg border bg-white px-3 py-2 text-sm shadow-sm">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-gray-600">Start</span>
+                                    <span className="text-slate-600">Start</span>
                                     <span className="font-medium">
                                         {fromLocalInputValue(form.startsAtLocal)?.toLocaleString() ?? "—"}
                                     </span>
                                 </div>
                                 <div className="mt-1 flex items-center justify-between">
-                                    <span className="text-gray-600">End</span>
+                                    <span className="text-slate-600">End</span>
                                     <span className="font-medium">{endLocalDisplay || "—"}</span>
                                 </div>
                                 <div className="mt-1 flex items-center justify-between">
-                                    <span className="text-gray-600">Duration</span>
+                                    <span className="text-slate-600">Duration</span>
                                     <span className="font-medium">{form.durationMins}m</span>
                                 </div>
                                 <div className="mt-1 flex items-center justify-between">
-                                    <span className="text-gray-600">Price</span>
+                                    <span className="text-slate-600">Price</span>
                                     <span className="font-medium">
                                         {gbFormatter.format((form.priceCents || 0) / 100)}
                                     </span>
@@ -602,7 +603,8 @@ export default function TutorAvailabilityPage() {
                                 <button
                                     type="submit"
                                     disabled={!canSubmit || creating}
-                                    className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-[#111629] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                                    style={{ backgroundColor: '#F7D250' }}
                                     title={!canSubmit ? "Pick a future start time and a valid duration/price" : "Add slot"}
                                 >
                                     {creating ? "Creating…" : "Add slot"}
@@ -614,11 +616,11 @@ export default function TutorAvailabilityPage() {
             </form>
 
             {/* Slots list */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <h2 className="font-medium mb-3">Your upcoming slots</h2>
 
                 {slots.length === 0 ? (
-                    <div className="rounded-md border border-dashed p-6 text-center text-sm text-gray-600 bg-gray-50">
+                    <div className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-600 bg-white shadow-sm">
                         No upcoming slots. Use the form above to publish your first availability.
                     </div>
                 ) : (

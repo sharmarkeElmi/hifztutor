@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Header from "@/app/components/Header";
+import Footer from "@/app/components/Footer";
 import SlotHoldModal from "@/app/components/booking/SlotHoldModal";
 
 type ProfileRow = {
@@ -314,94 +315,96 @@ export default function PublicTutorProfilePage() {
     <>
       <Header />
       <div className="mx-auto max-w-5xl p-6">
-      {/* Header / card */}
-      <div className="flex flex-col gap-6 rounded-xl border bg-white p-5 shadow-sm md:flex-row md:items-center">
-        <div className="relative h-28 w-28 overflow-hidden rounded-full ring-4 ring-emerald-50">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photoUrl} alt={displayName} className="h-full w-full object-cover" />
-        </div>
-
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold">{displayName}</h1>
-            <CountryBadge code={country} />
-            {years != null && (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                {years}+ yrs exp
-              </span>
-            )}
+      {/* Header / Hero */}
+      <section className="rounded-2xl border border-[#CDD5E0] bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-8">
+          {/* Photo */}
+          <div className="relative overflow-hidden rounded-2xl ring-4 ring-[#F7F8FA] h-[180px] w-full md:h-[200px] md:w-[220px] md:flex-none">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photoUrl} alt={displayName} className="h-full w-full object-cover" />
           </div>
-          <p className="mt-1 text-muted-foreground">{headline}</p>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {languages.length ? (
-              languages.map((lang, i) => (
-                <span key={`${lang}-${i}`} className="rounded-full border px-2 py-0.5 text-xs text-gray-700">
-                  {lang}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">Languages not set</span>
-            )}
-          </div>
-        </div>
-
-        <div className="w-full md:w-auto">
-          <div className="rounded-lg border bg-gray-50 p-4 text-center">
-            <div className="text-sm text-muted-foreground">Hourly rate</div>
-            <div className="text-2xl font-semibold">
-              {rate ? `£${rate}` : "—"}
+          {/* Identity & badges */}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-3xl font-extrabold text-[#111629]">{displayName}</h1>
+              <CountryBadge code={country} />
+              {years != null && (
+                <span className="rounded-full bg-[#D3F501] px-2 py-0.5 text-xs font-semibold text-[#111629]">{years}+ yrs exp</span>
+              )}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Link
-                href={`/messages/${tutorId}`}
-                className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm hover:bg-gray-100"
-              >
-                Message
-              </Link>
-              {authed ? (
-                <button
-                  onClick={() => alert("Booking flow coming soon")}
-                  className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700"
-                >
-                  Book trial
-                </button>
+            <p className="mt-1 text-lg font-semibold text-[#111629] opacity-90">{headline}</p>
+
+            {/* Languages */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {languages.length ? (
+                languages.map((lang, i) => (
+                  <span key={`${lang}-${i}-${tutorId}`} className="rounded-full border border-[#CDD5E0] px-2 py-0.5 text-xs font-medium text-[#111629]">{lang}</span>
+                ))
               ) : (
-                <Link
-                  href={`/student/signin?next=${nextParam}`}
-                  className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700"
-                >
-                  Book trial
-                </Link>
+                <span className="text-xs text-[#111629] opacity-60">Languages not set</span>
               )}
             </div>
           </div>
+
+          {/* Rate & primary CTAs */}
+          <div className="md:self-stretch md:flex-none">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-[#CDD5E0] bg-[#F7F8FA] p-5 text-center">
+              <div>
+                <div className="text-sm font-medium text-[#111629] opacity-70">Hourly rate</div>
+                <div className="mt-1 text-4xl font-extrabold tracking-tight text-[#111629]">{rate ? `£${rate}` : "—"}</div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Link
+                  href={`/messages/${tutorId}`}
+                  className="inline-flex items-center justify-center rounded-md border border-[#CDD5E0] px-3 py-2 text-sm font-semibold text-[#111629] hover:bg-[#F7D250] hover:text-[#111629]"
+                >
+                  Message
+                </Link>
+                {authed ? (
+                  <button
+                    onClick={() => alert('Booking flow coming soon')}
+                    className="inline-flex items-center justify-center rounded-md bg-[#F7D250] px-3 py-2 text-sm font-semibold text-[#111629] hover:bg-[#D3F501]"
+                  >
+                    Book trial
+                  </button>
+                ) : (
+                  <Link
+                    href={`/student/signin?next=${nextParam}`}
+                    className="inline-flex items-center justify-center rounded-md bg-[#F7D250] px-3 py-2 text-sm font-semibold text-[#111629] hover:bg-[#D3F501]"
+                  >
+                    Book trial
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Bio */}
       <div className="mt-6 rounded-xl border bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold">About</h2>
+        <h2 className="text-xl font-bold text-[#111629]">About</h2>
         <p className="mt-2 whitespace-pre-line text-gray-700">{bio}</p>
       </div>
 
       {/* Available lessons (public) - weekly grid */}
       <div className="mt-6 rounded-xl border bg-white p-5 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="inline-flex overflow-hidden rounded-md border">
+          <div className="inline-flex overflow-hidden rounded-md border border-[#CDD5E0]">
             <button
               onClick={() => setWeekStart(addDays(weekStart, -7))}
-              className="px-3 py-2 text-sm hover:bg-gray-50"
+              className="px-3 py-2 text-sm hover:bg-[#F7F8FA]"
               aria-label="Previous week"
             >
               ‹
             </button>
-            <div className="px-3 py-2 text-sm font-medium border-l border-r">
+            <div className="border-l border-r border-[#CDD5E0] px-3 py-2 text-sm font-medium">
               {weekLabel}
             </div>
             <button
               onClick={() => setWeekStart(addDays(weekStart, 7))}
-              className="px-3 py-2 text-sm hover:bg-gray-50"
+              className="px-3 py-2 text-sm hover:bg-[#F7F8FA]"
               aria-label="Next week"
             >
               ›
@@ -427,7 +430,7 @@ export default function PublicTutorProfilePage() {
             const daySlots = groupedByDay[i];
 
             return (
-              <div key={i} className="rounded-lg border bg-gray-50 p-3">
+              <div key={i} className="rounded-xl border border-[#CDD5E0] bg-white p-3">
                 <div className="mb-2 flex items-end justify-between">
                   <div className="font-medium">
                     {dayLabel}
@@ -462,14 +465,16 @@ export default function PublicTutorProfilePage() {
                                   "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm shadow-sm ring-1 transition",
                                   isHeld
                                     ? "cursor-not-allowed bg-gray-100 text-gray-500 ring-gray-200"
-                                    : "bg-white ring-gray-200 hover:bg-emerald-50"
+                                    : "bg-white ring-[#CDD5E0] hover:bg-[#F7D250] hover:text-[#111629]"
                                 ].join(" ")}
                                 title={`${new Date(s.starts_at).toLocaleString()} → ${new Date(s.ends_at ?? s.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
                               >
                                 <span className="tabular-nums">{start}</span>
                                 <span className={[
                                   "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] ring-1",
-                                  isHeld ? "bg-gray-100 text-gray-600 ring-gray-200" : "bg-emerald-50 text-emerald-700 ring-emerald-100",
+                                  isHeld
+                                    ? "bg-[#CDD5E0] text-[#111629] ring-[#CDD5E0]"
+                                    : "bg-[#F7D250] text-[#111629] ring-[#CDD5E0]",
                                 ].join(" ")}>{label}</span>
                                 <span className="text-xs text-gray-500">{price}</span>
                               </button>
@@ -488,7 +493,7 @@ export default function PublicTutorProfilePage() {
         <div className="mt-4 flex items-center justify-center">
           <button
             onClick={() => setWeekStart(startOfWeek(new Date()))}
-            className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+            className="rounded-md border border-[#CDD5E0] px-3 py-1.5 text-sm text-[#111629] hover:bg-[#F7D250]"
           >
             Back to this week
           </button>
@@ -504,7 +509,8 @@ export default function PublicTutorProfilePage() {
         open={holdOpen}
         onClose={handleModalClose}
       />
-    </div>
+      </div>
+      <Footer />
     </>
   );
 }

@@ -133,30 +133,37 @@ export default function StudentLessonsPage() {
   return (
     <Shell role="student" activeKey="lessons">
       <div className="p-4 md:p-6">
-        <h1 className="text-2xl font-semibold">Lessons</h1>
-        <p className="text-muted-foreground">Your scheduled and previous sessions.</p>
+        <div className="relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Lessons</h1>
+          <p className="text-slate-600 mt-1">Your scheduled and previous sessions.</p>
+          <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10" style={{ background: '#D3F501' }} />
+        </div>
 
-        {loading && <p className="mt-4">Loading…</p>}
-        {error && <p className="mt-4 text-red-600">{error}</p>}
+        {loading && (
+          <div className="mt-4 rounded-lg border bg-white p-4 text-sm text-slate-600">Loading…</div>
+        )}
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+        )}
 
         {!loading && !error && (
-          <div className="mt-6 space-y-10">
+          <div className="mt-6 space-y-8 sm:space-y-10">
             {/* Upcoming */}
             <section>
-              <h2 className="text-lg font-medium mb-3">Upcoming</h2>
+              <h2 className="text-lg font-semibold mb-3">Upcoming</h2>
               {upcoming.length === 0 ? (
-                <div className="rounded-md border p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border p-5 text-sm text-slate-600 bg-white shadow-sm">
                   No upcoming lessons yet.
                 </div>
               ) : (
-                <ul className="grid gap-3">
+                <ul className="grid gap-3 sm:gap-4">
                   {upcoming.map(b => {
                     const t = tutorsById[b.tutor_id];
                     return (
-                      <li key={b.id} className="rounded-md border p-4 flex items-center justify-between">
+                      <li key={b.id} className="rounded-xl border p-4 sm:p-5 flex items-center justify-between bg-white shadow-sm">
                         <div className="flex items-center gap-3">
                           {/* Avatar */}
-                          <div className="h-10 w-10 rounded-full bg-slate-200 overflow-hidden">
+                          <div className="h-10 w-10 rounded-full overflow-hidden border" style={{ borderColor: '#CDD5E0', background: '#F7F8FA' }}>
                             {t?.avatar_url ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={t.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -172,16 +179,13 @@ export default function StudentLessonsPage() {
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          {typeof b.price_cents === "number" && (
-                            <div className="text-sm">
-                              {(b.price_cents / 100).toLocaleString(undefined, {
-                                style: "currency",
-                                currency: "USD",
-                              })}
+                        <div className="text-right space-y-1">
+                          {typeof b.price_cents === 'number' && (
+                            <div className="text-sm text-slate-600">
+                              {(b.price_cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
                             </div>
                           )}
-                          <span className="inline-block text-xs rounded px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="inline-block text-xs rounded px-2 py-1 border" style={{ background: '#F7D250', color: '#111629', borderColor: '#F7D250' }}>
                             {b.status}
                           </span>
                         </div>
@@ -194,19 +198,19 @@ export default function StudentLessonsPage() {
 
             {/* Past */}
             <section>
-              <h2 className="text-lg font-medium mb-3">Past</h2>
+              <h2 className="text-lg font-semibold mb-3">Past</h2>
               {past.length === 0 ? (
-                <div className="rounded-md border p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border p-5 text-sm text-slate-600 bg-white shadow-sm">
                   No past lessons yet.
                 </div>
               ) : (
-                <ul className="grid gap-3">
+                <ul className="grid gap-3 sm:gap-4">
                   {past.map(b => {
                     const t = tutorsById[b.tutor_id];
                     return (
-                      <li key={b.id} className="rounded-md border p-4 flex items-center justify-between bg-slate-50">
+                      <li key={b.id} className="rounded-xl border p-4 sm:p-5 flex items-center justify-between bg-white shadow-sm">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-slate-200 overflow-hidden">
+                          <div className="h-10 w-10 rounded-full overflow-hidden border" style={{ borderColor: '#CDD5E0', background: '#F7F8FA' }}>
                             {t?.avatar_url ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={t.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -221,7 +225,7 @@ export default function StudentLessonsPage() {
                             </div>
                           </div>
                         </div>
-                        <span className="inline-block text-xs rounded px-2 py-1 bg-slate-100 text-slate-600 border">
+                        <span className="inline-block text-xs rounded px-2 py-1 border" style={{ background: '#F7F8FA', color: '#111629', borderColor: '#CDD5E0' }}>
                           {b.status}
                         </span>
                       </li>

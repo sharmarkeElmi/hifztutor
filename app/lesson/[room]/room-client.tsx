@@ -136,12 +136,12 @@ function RoomHeader({
   };
 
   return (
-    <div className="mb-3 rounded-md border bg-white/80 backdrop-blur px-3 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mb-3 rounded-xl border border-[#CDD5E0] bg-white/90 backdrop-blur px-3 py-2 sm:px-4 sm:py-2.5 text-[#111629] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shadow">
       <div className="flex items-center gap-2 text-sm">
-        <span className="inline-flex items-center rounded-full border px-2 py-0.5">
+        <span className="inline-flex items-center rounded-full border border-[#CDD5E0] bg-white/80 px-2 py-0.5 text-sm">
           Room: <span className="ml-1 font-medium">{roomName}</span>
         </span>
-        <span className="inline-flex items-center rounded-full border px-2 py-0.5">
+        <span className="inline-flex items-center rounded-full border border-[#CDD5E0] bg-white/80 px-2 py-0.5 text-sm">
           Role: <span className="ml-1 font-medium capitalize">{role}</span>
         </span>
         <span className="hidden sm:inline text-muted-foreground">•</span>
@@ -151,14 +151,14 @@ function RoomHeader({
       </div>
       <div className="flex items-center gap-2">
         <span
-          className="inline-flex items-center rounded-full border px-2 py-0.5 text-sm"
+          className="inline-flex items-center rounded-full border border-[#CDD5E0] bg-white/80 px-2 py-0.5 text-sm"
           title="Participants in call"
         >
           <span className="mr-1">Participants:</span>
           <span className="font-medium">{participantCount}</span>
         </span>
         <span
-          className="inline-flex items-center rounded-full border px-2 py-0.5 text-sm"
+          className="inline-flex items-center rounded-full border border-[#CDD5E0] bg-white/80 px-2 py-0.5 text-sm"
           title="Time in call"
         >
           <span className="mr-1">In call:</span>
@@ -166,7 +166,7 @@ function RoomHeader({
         </span>
         <button
           onClick={handleLeave}
-          className="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1.5 text-white text-sm hover:bg-red-700"
+          className="inline-flex items-center justify-center rounded-md bg-[#F7D250] px-3 py-1.5 text-sm font-semibold text-[#111629] shadow-sm hover:bg-[#D3F501] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F7D250]"
         >
           Leave
         </button>
@@ -262,23 +262,44 @@ export default function RoomClient({ roomName, livekitUrl }: Props) {
     // IMPORTANT: include `supabase` to satisfy react-hooks/exhaustive-deps
   }, [roomName, router, supabase]);
 
+  // LiveKit CSS variable overrides using brand palette
+  const lkVars: React.CSSProperties & Record<string, string> = {
+    "--lk-control-bar-background": "#111629",
+    "--lk-control-bar-text": "#111629",
+    "--lk-button-background": "#F7D250",
+    "--lk-button-text": "#111629",
+    "--lk-focus-ring": "#D3F501",
+    "--lk-border-color": "#CDD5E0",
+    "--lk-icon-color": "#111629",
+    "--lk-text-color": "#111629",
+    "--lk-menu-item-text": "#111629",
+    "--lk-menu-item-hover-text": "#111629",
+    "--lk-background-color": "#F7F8FA",
+  };
+
   // Loading & error UI
   if (loading) {
-    return <p className="text-center mt-10">Preparing your room…</p>;
+    return (
+      <div className="mt-16 flex justify-center">
+        <div className="rounded-xl border border-[#CDD5E0] bg-white px-5 py-4 text-sm text-[#111629] shadow-sm">
+          Preparing your room…
+        </div>
+      </div>
+    );
   }
 
   if (!token) {
     return (
-      <div className="max-w-xl mx-auto mt-10 space-y-3">
-        <h1 className="text-2xl font-semibold">Couldn&apos;t join the room</h1>
-        <p className="text-muted-foreground">
+      <div className="max-w-xl mx-auto mt-10 space-y-4 text-[#111629]">
+        <h1 className="text-2xl font-bold">Couldn&apos;t join the room</h1>
+        <p className="text-[#111629]/80">
           {apiError
             ? apiError
             : "We weren&apos;t able to obtain a LiveKit token. Please try again."}
         </p>
         <button
           onClick={() => router.back()}
-          className="rounded border px-3 py-1.5 hover:bg-gray-50"
+          className="rounded-md border border-[#CDD5E0] px-3 py-1.5 text-sm text-[#111629] hover:bg-[#F7D250]"
         >
           Go back
         </button>
@@ -288,30 +309,63 @@ export default function RoomClient({ roomName, livekitUrl }: Props) {
 
   // LiveKit video UI with header
   return (
-    <div className="h-[calc(100vh-100px)] bg-gray-50">
-      <LiveKitRoom
-        token={token}
-        serverUrl={livekitUrl}
-        connect
-        audio
-        video
-        onDisconnected={() => {
-          window.location.assign(leaveTo);
-        }}
-      >
-        {/* Polished header above the stock conference UI */}
-        <div className="px-2 pt-2">
-          <RoomHeader
-            roomName={roomName}
-            role={role}
-            displayName={displayName}
-            leaveTo={leaveTo}
-          />
-        </div>
+    <div className="min-h-[calc(100vh-100px)] bg-[#111629]">
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-3 sm:py-4">
+        <LiveKitRoom
+          token={token}
+          serverUrl={livekitUrl}
+          connect
+          audio
+          video
+          onDisconnected={() => {
+            window.location.assign(leaveTo);
+          }}
+        >
+          <div
+            data-lk-theme="default"
+            style={lkVars}
+          >
+            <style jsx global>{`
+              /* Force dark text/icons on LiveKit control labels and menus */
+              [data-lk-theme] .lk-control-bar,
+              [data-lk-theme] .lk-control-bar * {
+                color: #111629 !important;
+              }
+              [data-lk-theme] .lk-control-bar .lk-button svg,
+              [data-lk-theme] .lk-menu svg {
+                fill: #111629 !important;
+              }
+              /* Ensure menus, tooltips use dark text as well */
+              [data-lk-theme] .lk-menu,
+              [data-lk-theme] .lk-menu * {
+                color: #111629 !important;
+              }
+              /* Force Leave button text to remain white */
+              [data-lk-theme] .lk-control-bar .lk-button[data-lk-leave] {
+                color: #ffffff !important;
+              }
+            `}</style>
+            {/* Polished header above the stock conference UI */}
+            <div className="px-2 pt-2 mb-2 sm:mb-3">
+              <RoomHeader
+                roomName={roomName}
+                role={role}
+                displayName={displayName}
+                leaveTo={leaveTo}
+              />
+            </div>
 
-        {/* Stock, accessible conference UI (tiles, mute/cam toggles, leave button, etc.) */}
-        <VideoConference />
-      </LiveKitRoom>
+            {/* Constrained stage: rounded, with subtle ring; height limited for large screens */}
+            <div
+              className="rounded-2xl ring-1 ring-[#CDD5E0] bg-black shadow-lg"
+              style={{ height: "min(72vh, 820px)" }}
+            >
+              {/* Stock, accessible conference UI (tiles, mute/cam toggles, leave button, etc.) */}
+              <VideoConference />
+            </div>
+          </div>
+        </LiveKitRoom>
+      </div>
     </div>
   );
 }

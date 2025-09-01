@@ -8,6 +8,7 @@
 //  - Slate neutrals for readable text
 
 import Link from "next/link";
+import Footer from "@/app/components/Footer";
 
 export default function BecomeATutorPage() {
   return (
@@ -169,6 +170,7 @@ export default function BecomeATutorPage() {
           </div>
         </div>
       </section>
+      <Footer />
     </main>
   );
 }

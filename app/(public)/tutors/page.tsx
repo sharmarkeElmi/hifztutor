@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Header from "@/app/components/Header";
+import Footer from "@/app/components/Footer";
 import { createBrowserClient } from "@supabase/ssr";
 
 /** Row from the public.tutor_directory view */
@@ -29,6 +30,15 @@ type TutorCardData = {
 };
 
 type SortKey = "relevance" | "price_low" | "price_high" | "experience";
+
+function formatGBP(rate: number | null) {
+  if (rate == null) return "—";
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(rate);
+  } catch {
+    return `£${rate}`;
+  }
+}
 
 export default function TutorsPage() {
   const [loading, setLoading] = useState(true);
@@ -208,6 +218,7 @@ export default function TutorsPage() {
           </ul>
         )}
       </div>
+      <Footer />
     </>
   );
 }
@@ -215,87 +226,92 @@ export default function TutorsPage() {
 /** Card */
 function TutorCard({ t }: { t: TutorCardData }) {
   return (
-    <div className="group h-full rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={t.image ?? "/vercel.svg"}
-          alt={t.name}
-          className="h-14 w-14 rounded-full object-cover ring-4 ring-emerald-50"
-        />
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
+    <div className="group h-full rounded-2xl border border-[#CDD5E0] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      {/* Band layout: photo | info | rate/CTAs */}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8 lg:min-h-[200px]">
+        {/* Photo */}
+        <div className="relative overflow-hidden rounded-2xl ring-4 ring-[#F7F8FA] h-[160px] w-full lg:h-[160px] lg:w-[220px] lg:flex-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+            alt={t.name}
+            className="h-full w-full object-cover"
+          />
+        </div>
+
+        {/* Identity & summary */}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/tutors/${t.id}`}
-              className="block truncate text-base font-semibold hover:underline"
+              className="truncate text-2xl font-extrabold leading-snug text-[#111629] hover:underline"
               title={t.name}
             >
               {t.name}
             </Link>
             {t.years != null && t.years > 0 && (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-100">
-                {t.years}+ yrs
+              <span className="rounded-full bg-[#D3F501] px-2 py-0.5 text-[11px] font-semibold text-[#111629] ring-1 ring-[#CDD5E0]">
+                {t.years}+ yrs exp
               </span>
             )}
           </div>
-          <p className="line-clamp-2 text-sm text-gray-600" title={t.headline}>
-            {t.headline}
-          </p>
+
+          {t.headline && (
+            <h3 className="mt-1 line-clamp-1 text-lg font-semibold text-[#111629]">
+              {t.headline}
+            </h3>
+          )}
+
+          {t.languages.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {t.languages.map((lang, i) => (
+                <span
+                  key={`${lang}-${i}-${t.id}`}
+                  className="rounded-full border border-[#CDD5E0] px-2 py-0.5 text-xs font-medium text-[#111629]"
+                >
+                  {lang}
+                </span>
+              ))}
+            </div>
+          )}
+
           {(() => {
             const raw = (t.bio ?? "").replace(/\s+/g, " ").trim();
             if (!raw) return null;
-            const snippet = raw.length > 160 ? raw.slice(0, 160) + "…" : raw;
+            const snippet = raw.length > 180 ? raw.slice(0, 180) + "…" : raw;
             return (
-              <p className="mt-1 text-sm text-gray-500" title={raw}>
-                {snippet}
+              <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[#111629] opacity-80">
+                {snippet} {" "}
+                <Link href={`/tutors/${t.id}`} className="font-semibold text-[#111629] hover:underline">
+                  Learn more
+                </Link>
               </p>
             );
           })()}
         </div>
-      </div>
 
-      {/* Languages */}
-      {t.languages.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {t.languages.slice(0, 4).map((l, i) => (
-            <span
-              key={`${l}-${i}`}
-              className="rounded-full border px-2 py-0.5 text-[11px] text-gray-700"
-            >
-              {l}
-            </span>
-          ))}
-          {t.languages.length > 4 && (
-            <span className="text-[11px] text-gray-500">
-              +{t.languages.length - 4} more
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="mt-4 flex items-end justify-between">
-        <div className="text-sm text-gray-600">
-          Hourly rate
-          <div className="text-xl font-semibold">
-            {t.rate != null ? `£${t.rate}` : "—"}
+        {/* Rate & CTAs */}
+        <div className="lg:self-stretch lg:flex-none w-full lg:w-[260px]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-[#CDD5E0] bg-[#F7F8FA] p-5 text-center">
+            <div>
+              <div className="text-sm font-medium text-[#111629] opacity-70">50‑min lesson</div>
+              <div className="mt-1 text-3xl font-extrabold tracking-tight text-[#111629]">{formatGBP(t.rate)}</div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Link
+                href={`/messages/${t.id}`}
+                className="inline-flex items-center justify-center rounded-md border border-[#CDD5E0] px-3 py-2 text-sm font-semibold text-[#111629] hover:bg-[#F7D250] hover:text-[#111629]"
+              >
+                Message
+              </Link>
+              <Link
+                href={`/tutors/${t.id}`}
+                className="inline-flex items-center justify-center rounded-md bg-[#F7D250] px-3 py-2 text-sm font-semibold text-[#111629] hover:bg-[#D3F501]"
+              >
+                Book trial
+              </Link>
+            </div>
           </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Link
-            href={`/tutors/${t.id}`}
-            className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-700"
-          >
-            View profile
-          </Link>
-          <Link
-            href={`/messages/${t.id}`}
-            className="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-          >
-            Message
-          </Link>
         </div>
       </div>
     </div>
