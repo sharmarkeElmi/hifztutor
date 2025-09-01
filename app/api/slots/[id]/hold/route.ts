@@ -17,7 +17,7 @@ type SlotRow = {
 
 export async function POST(
   _req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   // Next.js 15 requires awaiting cookies()
   const cookieStore = await cookies();
@@ -57,7 +57,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const slotId = params.id;
+  const { id: slotId } = await context.params;
   const nowIso = new Date().toISOString();
 
   // Hold duration (in minutes)

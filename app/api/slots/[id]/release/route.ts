@@ -4,7 +4,10 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  _req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   // Next.js 15: await cookies()
   const cookieStore = await cookies();
 
@@ -32,12 +35,12 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   );
 
   try {
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(bearer ?? undefined);
     if (authErr || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const slotId = params.id;
+    const { id: slotId } = await context.params;
 
     const { error: upErr } = await supabase
       .from("lesson_slots")

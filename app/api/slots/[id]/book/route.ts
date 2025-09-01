@@ -18,7 +18,7 @@ type SlotRow = {
 
 export async function POST(
   _req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   // Next.js 15: await cookies()
   const cookieStore = await cookies();
@@ -47,74 +47,62 @@ export async function POST(
   );
 
   // Auth
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(bearer ?? undefined);
   if (authErr || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const slotId = params.id;
+  const { id: slotId } = await context.params;
 
-  // Atomically flip the slot from HELD -> BOOKED if current user holds it and it hasn't expired
-  const nowIso = new Date().toISOString();
-  const { data: slotAfterUpdate, error: upErr } = await supabase
+  // Read slot details (DB trigger/book_slot_tx enforces atomic availability during INSERT)
+  const { data: slotRow, error: slotErr } = await supabase
     .from("lesson_slots")
-    .update({ status: "booked" })
-    .eq("id", slotId)
-    .eq("held_by", user.id)
-    .eq("status", "held")
-    .gt("hold_expires_at", nowIso)
     .select("id,tutor_id,starts_at,ends_at,price_cents,status,held_by,hold_expires_at")
+    .eq("id", slotId)
     .single<SlotRow>();
 
-  if (upErr) {
-    return NextResponse.json({ error: upErr.message }, { status: 400 });
-  }
-  if (!slotAfterUpdate) {
-    // Someone else booked it, hold expired, or you didn’t hold it
-    return NextResponse.json({ error: "Slot is not available." }, { status: 409 });
+  if (slotErr || !slotRow) {
+    return NextResponse.json({ error: slotErr?.message || "Slot not found" }, { status: 400 });
   }
 
-  // Create booking record
+  // Create booking record (DB trigger/book_slot_tx enforces atomic availability & transitions)
   const { data: booking, error: insErr } = await supabase
     .from("bookings")
     .insert({
-      slot_id: slotAfterUpdate.id,
-      tutor_id: slotAfterUpdate.tutor_id,
+      slot_id: slotRow.id,
+      tutor_id: slotRow.tutor_id,
       student_id: user.id,
-      starts_at: slotAfterUpdate.starts_at,
-      ends_at: slotAfterUpdate.ends_at,
-      price_cents: slotAfterUpdate.price_cents ?? 0,
+      starts_at: slotRow.starts_at,
+      ends_at: slotRow.ends_at,
+      price_cents: slotRow.price_cents ?? 0,
       status: "confirmed",
     })
     .select("id,slot_id,tutor_id,student_id,starts_at,ends_at,price_cents,status,created_at")
     .single();
 
   if (insErr) {
-    // roll back the slot to 'held' so the user can retry (best-effort)
-    await supabase
-      .from("lesson_slots")
-      .update({ status: "held" })
-      .eq("id", slotId)
-      .eq("held_by", user.id)
-      .gt("hold_expires_at", nowIso);
-    return NextResponse.json({ error: insErr.message }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: insErr.message,
+        debug: {
+          slotId,
+          userId: user.id,
+          slot: slotRow,
+        },
+      },
+      { status: 400 }
+    );
   }
-
-  // Clear transient hold metadata now that it's booked (best-effort)
-  await supabase
-    .from("lesson_slots")
-    .update({ held_by: null, hold_expires_at: null })
-    .eq("id", slotId);
 
   return NextResponse.json({
     message: "Booked",
     booking,
     slot: {
-      id: slotAfterUpdate.id,
-      tutor_id: slotAfterUpdate.tutor_id,
-      starts_at: slotAfterUpdate.starts_at,
-      ends_at: slotAfterUpdate.ends_at,
-      price_cents: slotAfterUpdate.price_cents,
+      id: slotRow.id,
+      tutor_id: slotRow.tutor_id,
+      starts_at: slotRow.starts_at,
+      ends_at: slotRow.ends_at,
+      price_cents: slotRow.price_cents,
       status: "booked",
     },
   });

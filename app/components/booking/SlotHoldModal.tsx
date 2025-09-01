@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState, useReducer } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import Link from "next/link";
 
 type Props = {
   slotId: string | null;
@@ -19,19 +20,19 @@ type Props = {
 
 type HoldResp =
   | {
-      message: "Slot held";
-      slot: {
-        id: string;
-        tutor_id: string;
-        starts_at: string;
-        ends_at: string;
-        price_cents: number | null;
-        held_by: string | null;
-        hold_expires_at: string | null;
-        status: string;
-      };
-      hold_expires_at: string; // ISO
-    }
+    message: "Slot held";
+    slot: {
+      id: string;
+      tutor_id: string;
+      starts_at: string;
+      ends_at: string;
+      price_cents: number | null;
+      held_by: string | null;
+      hold_expires_at: string | null;
+      status: string;
+    };
+    hold_expires_at: string; // ISO
+  }
   | { error: string };
 
 // Optional slot summary type for success state
@@ -52,11 +53,12 @@ type BookResp = {
     price_cents?: number | null;
     tutor_id?: string;
   };
+  debug?: unknown; // optional diagnostics from API
 };
 
 export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Props) {
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [, forceRender] = useReducer((x) => x + 1, 0);
   const [isBooking, setIsBooking] = useState(false);
@@ -185,7 +187,8 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
 
   // Cancel = release the hold (best effort), then close
   const handleCancel = async () => {
-    if (slotId) {
+    // Do not release if booking has already succeeded or is in-flight
+    if (!isBooked && !isBooking && slotId) {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData.session?.access_token ?? null;
@@ -255,10 +258,10 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
       }
 
       if (!res.ok || data?.error) {
-        setError(data?.error || "Booking failed. Please try again.");
+        const detail = data.debug ? `\n${JSON.stringify(data.debug, null, 2)}` : "";
+        setError((data?.error || "Booking failed. Please try again.") + detail);
         return;
       }
-
       // success shape: { message: "Booked", booking: { id, ... }, slot: { ... } }
       const bId = data?.booking?.id;
       if (bId) setBookingId(bId);
@@ -273,12 +276,8 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
         });
       }
 
-      // Switch UI into a success state and stop the countdown
       setIsBooked(true);
       setExpiresAt(null);
-
-      // Still notify parent if they want to route to checkout/lessons
-      if (onContinue) onContinue(slotId, bId);
     } catch {
       setError("Network error while booking the slot.");
     } finally {
@@ -291,7 +290,10 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={() => { if (!isBooking) handleCancel(); }}
+      />
 
       {/* Panel */}
       <div className="relative z-[101] w-full max-w-md rounded-t-2xl bg-white p-5 shadow-lg sm:rounded-2xl">
@@ -338,7 +340,8 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 onClick={handleCancel}
-                className="rounded-md border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                disabled={loading || isBooking}
+                className="rounded-md border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -378,12 +381,12 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
               >
                 Close
               </button>
-              <button
-                onClick={() => onContinue && slotId && onContinue(slotId, bookingId ?? undefined)}
-                className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+              <Link
+                href="/student/lessons"
+                className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 text-center"
               >
                 Go to My Lessons
-              </button>
+              </Link>
             </div>
           </>
         )}
