@@ -28,11 +28,6 @@ export async function POST(
     ? authHeader.slice('Bearer '.length)
     : null;
 
-  // Debug (optional): what cookies are visible on the server
-  const names = cookieStore.getAll().map(c => c.name);
-  console.log('[hold route] cookie names:', names);
-  console.log('[hold route] auth header present:', Boolean(bearer));
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -73,7 +68,7 @@ export async function POST(
       hold_expires_at: expiresIso,
     })
     .eq('id', slotId)
-    .eq('status', 'available')
+    .or(`status.eq.available,and(status.eq.held,held_by.eq.${user.id},hold_expires_at.gt.${nowIso})`)
     .gt('starts_at', nowIso)
     .select('id,status,held_by,hold_expires_at,starts_at,ends_at,price_cents,tutor_id')
     .maybeSingle<SlotRow>();
@@ -84,7 +79,7 @@ export async function POST(
 
   if (!slot) {
     return NextResponse.json(
-      { error: 'Slot is no longer available. Please pick another time.' },
+      { error: 'Sorry, someone else just reserved this time. Please pick another slot.' },
       { status: 409 }
     );
   }

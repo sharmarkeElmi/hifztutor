@@ -82,14 +82,7 @@ export async function POST(
 
   if (insErr) {
     return NextResponse.json(
-      {
-        error: insErr.message,
-        debug: {
-          slotId,
-          userId: user.id,
-          slot: slotRow,
-        },
-      },
+      { error: "Something went wrong while booking this slot. Please try again." },
       { status: 400 }
     );
   }

@@ -55,10 +55,7 @@ export async function POST(
     if (upErr) throw upErr;
 
     return NextResponse.json({ message: "Slot released" });
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : typeof err === "string" ? err : JSON.stringify(err);
-    console.error("Slot release error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong while releasing the slot. Please try again." }, { status: 500 });
   }
 }

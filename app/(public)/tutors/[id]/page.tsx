@@ -503,10 +503,6 @@ export default function PublicTutorProfilePage() {
         slotId={activeSlotId}
         open={holdOpen}
         onClose={handleModalClose}
-        onContinue={() => {
-          // TODO: navigate to checkout when implemented
-          handleModalClose();
-        }}
       />
     </div>
     </>

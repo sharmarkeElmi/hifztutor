@@ -15,7 +15,6 @@ type Props = {
   slotId: string | null;
   open: boolean;
   onClose: () => void;
-  onContinue?: (slotId: string, bookingId?: string) => void; // called after successful booking
 };
 
 type HoldResp =
@@ -56,7 +55,16 @@ type BookResp = {
   debug?: unknown; // optional diagnostics from API
 };
 
-export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Props) {
+// Helpers
+function fmtDate(dtISO: string) {
+  try { return new Date(dtISO).toLocaleString(); } catch { return dtISO; }
+}
+function fmtCurrency(cents: number | null | undefined) {
+  if (typeof cents !== 'number') return undefined;
+  try { return (cents / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' }); } catch { return `$${(cents/100).toFixed(2)}`; }
+}
+
+export default function SlotHoldModal({ slotId, open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
@@ -100,13 +108,8 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData.session?.access_token ?? null;
 
-        console.log('[SlotHoldModal] client effect running:', typeof window !== 'undefined');
-        console.log('[SlotHoldModal] session present:', Boolean(sessionData.session), 'sending bearer:', Boolean(accessToken));
-
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        console.log('[SlotHoldModal] hold headers keys:', Object.keys(headers));
 
         const res = await fetch(`/api/slots/${slotId}/hold`, {
           method: "POST",
@@ -185,6 +188,27 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
     return () => clearInterval(id);
   }, [expiresAt]);
 
+  // When the hold expires, immediately reflect it in the UI
+  useEffect(() => {
+    if (!expiresAt) return;
+    let done = false;
+    const check = () => {
+      if (done) return;
+      if (expiresAt.getTime() <= Date.now()) {
+        done = true;
+        setHeld(false);
+        setError("Hold expired. Please pick the slot again.");
+      }
+    };
+    // check immediately and then on an interval
+    check();
+    const id = setInterval(check, 500);
+    return () => {
+      done = true;
+      clearInterval(id);
+    };
+  }, [expiresAt]);
+
   // Cancel = release the hold (best effort), then close
   const handleCancel = async () => {
     // Do not release if booking has already succeeded or is in-flight
@@ -195,8 +219,6 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
 
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-        console.log('[SlotHoldModal] release headers keys:', Object.keys(headers));
 
         await fetch(`/api/slots/${slotId}/release`, {
           method: "POST",
@@ -233,8 +255,6 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-      console.log('[SlotHoldModal] book headers keys:', Object.keys(headers));
 
       const res = await fetch(`/api/slots/${slotId}/book`, {
         method: "POST",
@@ -313,14 +333,35 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
               )}
             </p>
 
+            {!isBooked && slotSummary && (
+              <div className="mt-4 rounded-md border bg-white p-3 text-sm" aria-live="polite">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">When</div>
+                    <div className="text-gray-600">{fmtDate(slotSummary.starts_at)} – {new Date(slotSummary.ends_at).toLocaleTimeString()}</div>
+                  </div>
+                  {fmtCurrency(slotSummary.price_cents) && (
+                    <div className="text-right">
+                      <div className="font-medium">Price</div>
+                      <div className="text-gray-700">{fmtCurrency(slotSummary.price_cents)}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {loading && (
-              <div className="mt-4 rounded-md border bg-gray-50 p-3 text-sm text-gray-700">
+              <div className="mt-4 flex items-center gap-2 rounded-md border bg-gray-50 p-3 text-sm text-gray-700" aria-live="polite">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
                 Holding the slot…
               </div>
             )}
 
             {error && (
-              <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <div role="alert" aria-live="assertive" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {error}
               </div>
             )}
@@ -337,26 +378,35 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
               </div>
             )}
 
-            <div className="mt-5 flex items-center justify-end gap-2">
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:flex sm:items-center sm:justify-end">
               <button
                 onClick={handleCancel}
                 disabled={loading || isBooking}
-                className="rounded-md border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="w-full sm:w-auto rounded-md border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleContinue}
                 disabled={!held || !!error || loading || isBooking || !!bookingId}
-                className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
               >
+                {isBooking && (
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                )}
                 {isBooking ? "Booking…" : "Continue"}
               </button>
             </div>
           </>
         ) : (
           <>
-            <h3 className="text-lg font-semibold">You’re booked in! 🎉</h3>
+            <h3 className="flex items-center gap-2 text-lg font-semibold">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white">✓</span>
+              You’re booked in!
+            </h3>
             <p className="mt-2 text-sm text-gray-600">
               We reserved this lesson successfully.
             </p>
@@ -374,7 +424,7 @@ export default function SlotHoldModal({ slotId, open, onClose, onContinue }: Pro
               )}
             </div>
 
-            <div className="mt-5 flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:justify-end">
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:flex sm:flex-row sm:justify-end">
               <button
                 onClick={handleCancel}
                 className="rounded-md border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
