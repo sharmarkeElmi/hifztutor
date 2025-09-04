@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import Link from "next/link";
@@ -17,7 +15,6 @@ export type SettingsTab = {
 };
 
 export interface SettingsShellProps {
-  role: "student" | "tutor";
   tabs: SettingsTab[];
   activeKey: string;
   children: ReactNode;
@@ -41,7 +38,6 @@ function cx(...classes: Array<string | false | null | undefined>) {
  * - Mobile: collapses into a horizontal scrollable tab bar
  */
 export default function SettingsShell({
-  role,
   tabs,
   activeKey,
   children,
@@ -51,31 +47,26 @@ export default function SettingsShell({
   const active = useMemo(() => tabs.find((t) => t.key === activeKey)?.key ?? tabs[0]?.key, [tabs, activeKey]);
 
   return (
-    <section className="relative">
-      {/* Page header (role chip) */}
-      <div className="mb-5 sm:mb-6 flex items-center gap-2">
-        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-slate-600">
-          {role === "student" ? "Student" : "Tutor"}
-        </span>
-        <span className="text-xs text-slate-400">Settings</span>
-      </div>
+    <section className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 
       {/* Mobile horizontal tabs */}
-      <div className="sm:hidden mb-4">
-        <div className="-mx-4 overflow-x-auto px-4">
-          <div className="flex gap-2">
+      <div className="sm:hidden mb-4 border-b border-slate-200">
+        <div className="-mx-4 overflow-x-auto px-4" role="tablist" aria-label="Settings tabs">
+          <div className="flex gap-3 px-1">
             {tabs.map((t) => (
               <Link
                 key={t.key}
                 href={t.href}
                 className={cx(
-                  "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap",
+                  "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F7D250] focus-visible:ring-offset-2",
                   t.disabled && "opacity-50 pointer-events-none",
                   active === t.key
                     ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]"
                     : "border-[#CDD5E0] bg-white text-slate-700 hover:bg-slate-50"
                 )}
                 aria-current={active === t.key ? "page" : undefined}
+                role="tab"
+                aria-selected={active === t.key}
               >
                 {t.icon ? <span className="grid place-items-center text-[13px]">{t.icon}</span> : null}
                 <span>{t.label}</span>
@@ -88,26 +79,26 @@ export default function SettingsShell({
 
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-6">
         {/* Left rail nav */}
-        <nav className="sm:col-span-4 lg:col-span-3 xl:col-span-3">
+        <nav aria-label="Settings sections" className="hidden sm:block sm:col-span-4 lg:col-span-3 xl:col-span-3">
           <div className="sticky top-20">
-            <ul className="space-y-1">
+            <ul className="space-y-3">
               {tabs.map((t) => (
                 <li key={t.key}>
                   <Link
                     href={t.href}
                     className={cx(
-                      "group flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+                      "group flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F7D250] focus-visible:ring-offset-2",
                       t.disabled && "opacity-50 pointer-events-none",
                       active === t.key
                         ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]"
-                        : "border-[#CDD5E0] bg-white text-slate-700 hover:bg-slate-50"
+                        : "border-[#CDD5E0] bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     )}
                     aria-current={active === t.key ? "page" : undefined}
                   >
                     {t.icon ? (
                       <span
                         className={cx(
-                          "grid h-8 w-8 place-items-center rounded-md border",
+                          "grid h-8 w-8 place-items-center rounded-md border transition",
                           active === t.key ? "border-[#F7D250]" : "border-[#CDD5E0]"
                         )}
                         style={active === t.key ? { background: "#FFF3C2", color: "#111629" } : {}}
@@ -127,9 +118,9 @@ export default function SettingsShell({
 
         {/* Content pane */}
         <div className="sm:col-span-8 lg:col-span-9 xl:col-span-9">
-          <div className="relative overflow-hidden rounded-xl border bg-white p-5 sm:p-6 shadow-sm">
+          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md">
             {title ? (
-              <div className="mb-3">
+              <div className="mb-4 border-b pb-3">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
                 {description ? (
                   <p className="text-slate-600 mt-1 text-sm">{description}</p>
@@ -137,11 +128,11 @@ export default function SettingsShell({
               </div>
             ) : null}
 
-            <div className="space-y-6">{children}</div>
+            <div className="space-y-8">{children}</div>
 
             {/* Accent blob */}
             <div
-              className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full opacity-10"
+              className="pointer-events-none absolute -right-10 -top-10 h-20 w-20 rounded-full opacity-5"
               style={{ background: "#D3F501" }}
               aria-hidden
             />

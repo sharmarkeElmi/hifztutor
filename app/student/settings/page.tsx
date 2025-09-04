@@ -251,7 +251,6 @@ export default function StudentSettingsPage() {
 
     return (
         <SettingsShell
-            role="student"
             tabs={TABS}
             activeKey={activeKey}
             title={titleByKey[activeKey]}
@@ -286,7 +285,6 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Full name</span>
                             <input
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                                placeholder="e.g. Aisha Khan"
                                 value={profile.fullName}
                                 onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))}
                             />
@@ -295,7 +293,6 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Display name (optional)</span>
                             <input
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                                placeholder="Name shown to others"
                                 value={profile.displayName}
                                 onChange={(e) => setProfile((p) => ({ ...p, displayName: e.target.value }))}
                             />
@@ -306,7 +303,6 @@ export default function StudentSettingsPage() {
                         <span className="text-sm font-medium">Avatar URL (optional)</span>
                         <input
                             className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                            placeholder="https://…"
                             value={profile.avatarUrl ?? ""}
                             onChange={(e) => setProfile((p) => ({ ...p, avatarUrl: e.target.value }))}
                         />
@@ -317,7 +313,6 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Time zone</span>
                             <input
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                                placeholder="e.g. Europe/London"
                                 value={profile.timezone}
                                 onChange={(e) => setProfile((p) => ({ ...p, timezone: e.target.value }))}
                             />
@@ -326,7 +321,6 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Locale</span>
                             <input
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                                placeholder="e.g. en-GB"
                                 value={profile.locale}
                                 onChange={(e) => setProfile((p) => ({ ...p, locale: e.target.value }))}
                             />
@@ -335,22 +329,20 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Languages</span>
                             <input
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                                placeholder="e.g. English, Arabic"
                                 value={profile.languages}
                                 onChange={(e) => setProfile((p) => ({ ...p, languages: e.target.value }))}
                             />
                         </label>
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                        <button className="rounded-md border px-4 py-2 text-sm hover:bg-slate-50">Cancel</button>
+                    <div className="flex justify-end">
                         <button
                             onClick={handleSaveAccount}
                             disabled={savingAccount}
                             className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
                             style={{ backgroundColor: "#F7D250" }}
                         >
-                            {savingAccount ? "Saving…" : "Save changes"}
+                            {savingAccount ? "Saving…" : "Save Changes"}
                         </button>
                     </div>
                 </div>
@@ -372,7 +364,6 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">New password</span>
                             <input
                                 type="password"
-                                placeholder="New password"
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
                                 value={passwords.new}
                                 onChange={(e) => setPasswords((p) => ({ ...p, new: e.target.value }))}
@@ -395,7 +386,7 @@ export default function StudentSettingsPage() {
                             className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
                             style={{ backgroundColor: "#F7D250" }}
                         >
-                            {savingPassword ? "Updating…" : "Update password"}
+                            {savingPassword ? "Saving…" : "Save Changes"}
                         </button>
                     </div>
                 </div>
@@ -408,7 +399,6 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Email</span>
                             <input
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                                placeholder="name@example.com"
                                 value={account.email}
                                 onChange={(e) => setAccount((a) => ({ ...a, email: e.target.value }))}
                             />
@@ -418,7 +408,6 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Phone (optional)</span>
                             <input
                                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
-                                placeholder="+44 7…"
                                 value={account.phone}
                                 onChange={(e) => setAccount((a) => ({ ...a, phone: e.target.value }))}
                             />
@@ -431,7 +420,7 @@ export default function StudentSettingsPage() {
                             className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
                             style={{ backgroundColor: "#F7D250" }}
                         >
-                            {savingEmail ? "Updating…" : "Update email"}
+                            {savingEmail ? "Saving…" : "Save Changes"}
                         </button>
                     </div>
                 </div>
@@ -466,7 +455,7 @@ export default function StudentSettingsPage() {
                             className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
                             style={{ backgroundColor: "#F7D250" }}
                         >
-                            {savingNotifications ? "Saving…" : "Save preferences"}
+                            {savingNotifications ? "Saving…" : "Save Changes"}
                         </button>
                     </div>
                 </div>
