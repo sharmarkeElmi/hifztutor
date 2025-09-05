@@ -47,7 +47,7 @@ export default function SettingsShell({
   const active = useMemo(() => tabs.find((t) => t.key === activeKey)?.key ?? tabs[0]?.key, [tabs, activeKey]);
 
   return (
-    <section className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <section className="relative w-full px-4 sm:px-6 lg:px-8">
 
       {/* Mobile horizontal tabs */}
       <div className="sm:hidden mb-4 border-b border-slate-200">
@@ -77,9 +77,9 @@ export default function SettingsShell({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-6">
+      <div className="sm:flex sm:items-start sm:gap-8">
         {/* Left rail nav */}
-        <nav aria-label="Settings sections" className="hidden sm:block sm:col-span-4 lg:col-span-3 xl:col-span-3">
+        <nav aria-label="Settings sections" className="hidden sm:block sm:w-56 shrink-0">
           <div className="sticky top-20">
             <ul className="space-y-3">
               {tabs.map((t) => (
@@ -91,10 +91,15 @@ export default function SettingsShell({
                       t.disabled && "opacity-50 pointer-events-none",
                       active === t.key
                         ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]"
-                        : "border-[#CDD5E0] bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                        : "border-transparent bg-transparent text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     )}
                     aria-current={active === t.key ? "page" : undefined}
                   >
+                    {active === t.key ? (
+                      <span className="h-5 w-1 rounded bg-[#F7D250]" aria-hidden />
+                    ) : (
+                      <span className="h-5 w-1" aria-hidden />
+                    )}
                     {t.icon ? (
                       <span
                         className={cx(
@@ -117,8 +122,8 @@ export default function SettingsShell({
         </nav>
 
         {/* Content pane */}
-        <div className="sm:col-span-8 lg:col-span-9 xl:col-span-9">
-          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md">
+        <div className="sm:flex-1">
+          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md transition-shadow hover:shadow-lg sm:max-w-2xl sm:mx-auto">
             {title ? (
               <div className="mb-4 border-b pb-3">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
@@ -128,7 +133,23 @@ export default function SettingsShell({
               </div>
             ) : null}
 
-            <div className="space-y-8">{children}</div>
+            <div>
+              <style jsx>{`
+                :global(.settings-pane button) {
+                  width: 100%;
+                  border-radius: 0.5rem;
+                  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                  transition: all 0.2s;
+                }
+                :global(.settings-pane button:hover:not(:disabled)) {
+                  filter: brightness(0.95);
+                }
+                :global(.settings-pane button:active:not(:disabled)) {
+                  transform: translateY(1px);
+                }
+              `}</style>
+              <div className="settings-pane space-y-8">{children}</div>
+            </div>
 
             {/* Accent blob */}
             <div
@@ -139,6 +160,6 @@ export default function SettingsShell({
           </div>
         </div>
       </div>
-    </section>
+      </section>
   );
 }

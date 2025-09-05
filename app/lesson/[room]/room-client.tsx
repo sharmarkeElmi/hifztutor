@@ -340,10 +340,6 @@ export default function RoomClient({ roomName, livekitUrl }: Props) {
               [data-lk-theme] .lk-menu * {
                 color: #111629 !important;
               }
-              /* Force Leave button text to remain white */
-              [data-lk-theme] .lk-control-bar .lk-button[data-lk-leave] {
-                color: #ffffff !important;
-              }
             `}</style>
             {/* Polished header above the stock conference UI */}
             <div className="px-2 pt-2 mb-2 sm:mb-3">

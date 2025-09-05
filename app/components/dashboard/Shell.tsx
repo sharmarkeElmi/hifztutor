@@ -15,34 +15,40 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import Image from "next/image";
 
-// 🔧 Include "availability" to match tutor menu
-type NavKey = "overview" | "lessons" | "messages" | "settings" | "availability";
+// 🔧 Include full set for student & tutor menus
+type NavKey =
+  | "overview"
+  | "messages"
+  | "lessons"
+  | "saved"
+  | "find_tutors"
+  | "availability"
+  | "classroom"
+  | "insights"
+  | "settings";
+
+// Local sidebar item type (we keep everything in this file)
+type SidebarItem = { key: NavKey | "logout"; label: string; href: string; badge?: ReactNode; exact?: boolean };
 
 type Props = {
   role: "student" | "tutor";
-  /**
-   * Optional explicit active key. Useful for deep routes
-   * like /messages/[peerId] or /lesson/[room], where
-   * pathname prefix matching isn’t reliable.
-   */
+  /** Optional explicit active key (for deep routes). */
   activeKey?: NavKey;
+  /** If provided, we will use this value and skip Supabase live fetching. */
+  unreadTotal?: number;
+  /** Optional external sign-out handler (e.g., API route). */
+  handleSignOut?: () => void | Promise<void>;
   children: ReactNode;
 };
 
-type NavItem = { key: NavKey; label: string; href: string; exact?: boolean };
 
-const BRAND = {
-  deep: "#0B2526",   // brand deep green
-  yellow: "#F7D949", // brand yellow
-  cool: "#EBF4F6",   // subtle page tint
-};
 
-export default function Shell({ role, children, activeKey }: Props) {
+export default function Shell({ role, children, activeKey, unreadTotal: unreadTotalProp, handleSignOut: handleSignOutProp }: Props) {
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -53,7 +59,14 @@ export default function Shell({ role, children, activeKey }: Props) {
   );
   const pathname = usePathname();
   const router = useRouter();
-  const [unreadTotal, setUnreadTotal] = useState<number>(0);
+  const [unreadTotal, setUnreadTotal] = useState<number>(unreadTotalProp ?? 0);
+
+  // Keep local state in sync if parent provides unreadTotal
+  useEffect(() => {
+    if (typeof unreadTotalProp === "number") {
+      setUnreadTotal(unreadTotalProp);
+    }
+  }, [unreadTotalProp]);
 
   // Fetch unread total for sidebar badge (via RPC)
   const refetchUnread = useCallback(async () => {
@@ -76,6 +89,11 @@ export default function Shell({ role, children, activeKey }: Props) {
 
   // Initial load + live updates on messages or read-state changes
   useEffect(() => {
+    if (typeof unreadTotalProp === "number") {
+      // Parent controls unreadTotal; skip live fetching
+      return;
+    }
+
     refetchUnread();
 
     const channel = supabase
@@ -99,196 +117,143 @@ export default function Shell({ role, children, activeKey }: Props) {
         /* noop */
       }
     };
-  }, [refetchUnread, supabase]);
+  }, [refetchUnread, supabase, unreadTotalProp]);
 
-  // Primary menu (MVP)
-  const menu: NavItem[] = useMemo(() => {
+  // Unified nav list for top navigation (desktop tabs + mobile select)
+  const navItems: SidebarItem[] = useMemo(() => {
+    const msgBadge =
+      unreadTotal > 0 ? (
+        <span
+          className="ml-1 inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-slate-900"
+          style={{ backgroundColor: "#D3F501" }}
+        >
+          {unreadTotal > 99 ? "99+" : unreadTotal}
+        </span>
+      ) : undefined;
+
     if (role === "student") {
       return [
-        { key: "overview", label: "Overview", href: "/student/dashboard", exact: true },
+        { key: "overview", label: "Home", href: "/student/dashboard", exact: true },
+        { key: "messages", label: "Messages", href: "/messages", badge: msgBadge },
         { key: "lessons", label: "My Lessons", href: "/student/lessons" },
-        { key: "messages", label: "Messages", href: "/messages" },
+        { key: "saved", label: "Saved", href: "/student/saved" },
+        { key: "find_tutors", label: "Find Tutors", href: "/tutors" },
         { key: "settings", label: "Settings", href: "/student/settings" },
+        { key: "logout", label: "Log out", href: "#logout" },
       ];
     } else {
       return [
-        { key: "overview", label: "Overview", href: "/tutor/dashboard", exact: true },
-        { key: "lessons", label: "Lessons", href: "/tutor/lessons" },
-        { key: "availability", label: "Availability", href: "/tutor/availability" }, // tutor-only
-        { key: "messages", label: "Messages", href: "/messages" },
+        { key: "overview", label: "Home", href: "/tutor/dashboard", exact: true },
+        { key: "messages", label: "Messages", href: "/messages", badge: msgBadge },
+        { key: "lessons", label: "My Lessons", href: "/tutor/lessons" },
+        { key: "classroom", label: "Classroom", href: "/tutor/classroom" },
+        { key: "availability", label: "Availability", href: "/tutor/availability" },
+        { key: "insights", label: "Insights", href: "/tutor/insights" },
         { key: "settings", label: "Settings", href: "/tutor/settings" },
+        { key: "logout", label: "Log out", href: "#logout" },
       ];
     }
-  }, [role]);
+  }, [role, unreadTotal]);
 
-  // Active helper – prefer explicit activeKey when provided
-  const isActive = (item: NavItem) => {
+  const isActive = (item: SidebarItem) => {
+    if (item.key === "logout") return false;
     if (activeKey) return item.key === activeKey;
     return pathname ? (item.exact ? pathname === item.href : pathname.startsWith(item.href)) : false;
   };
 
-  // Sign out then route to the correct sign-in for this role
-  const handleSignOut = async () => {
+  const defaultSignOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     router.replace(role === "tutor" ? "/tutor/signin" : "/student/signin");
     if (error) console.error("Sign out error:", error.message);
+  }, [router, role, supabase]);
+
+  const signOut = useCallback(async () => {
+    if (handleSignOutProp) return await handleSignOutProp();
+    return defaultSignOut();
+  }, [handleSignOutProp, defaultSignOut]);
+
+  const handleSelectNav = (value: string) => {
+    if (value === "#logout") {
+      signOut();
+    } else {
+      router.push(value);
+    }
   };
 
-  // Separate main menu items excluding "settings"
-  const mainMenu = menu.filter(item => item.key !== "settings");
-  // Extract the settings item
-  const settingsItem = menu.find(item => item.key === "settings");
-
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        backgroundImage: `radial-gradient(1200px 600px at 10% -10%, 0%, transparent 60%)`,
-        backgroundColor: "#CDD5E0",
-      }}
-    >
-      <div className="mx-auto max-w-[1340px] px-6 py-10 lg:px-8">
-        <div className="flex gap-8">
-          {/* ================= Sidebar ================= */}
-          <aside className="w-[300px] shrink-0 md:w-[320px]">
-            <div className="rounded-3xl border border-slate-100 bg-slate-50 shadow-[0_10px_40px_-18px_rgba(0,0,0,0.20)] h-[90vh] overflow-hidden flex flex-col justify-between">
-              {/* Brand strip */}
-              <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6 rounded-t-3xl rounded-b-xl" style={{ backgroundColor: "#111629" }}>
-                <div className="shrink-0">
-                  <Image
-                    src="/logo-mark-dark.svg"
-                    alt="Hifztutor"
-                    width={40}
-                    height={40}
-                    priority
-                    className="block"
-                  />
-                </div>
-                <div className="leading-tight">
-                  <p className="text-[18px] font-extrabold tracking-tight text-white">HifzTutor</p>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-white/70">
-                    {role === "tutor" ? "Tutor" : "Student"}
-                  </p>
-                </div>
-              </div>
+    <div className="min-h-screen bg-slate-50">
+      {/* Top bar with logo and navigation */}
+      <header className="sticky top-0 z-30 w-full border-b bg-white/95 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          {/* Row 1: Logo (and future actions) */}
+          <div className="h-14 flex items-center justify-between gap-4">
+            <Link
+              href={role === "student" ? "/student/dashboard" : "/tutor/dashboard"}
+              className="inline-flex items-center gap-2"
+            >
+              <Image src="/logo.svg" alt="HifzTutor" width={112} height={24} priority />
+            </Link>
+            {/* Mobile dropdown inside top header row */}
+            <div className="md:hidden flex-1">
+              <label className="sr-only" htmlFor="dash-nav">Navigation</label>
+              <select
+                id="dash-nav"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                value={navItems.find((i) => isActive(i))?.href ?? navItems[0].href}
+                onChange={(e) => handleSelectNav(e.target.value)}
+              >
+                {navItems.map((item) => (
+                  <option key={item.key} value={item.href === "#logout" ? "#logout" : item.href}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Right-side space reserved for future controls (e.g., refer a friend, language) */}
+            <div className="hidden md:block" />
+          </div>
 
-              {/* Nav and footer container */}
-              <nav className="flex flex-col justify-between h-full px-3 py-8">
-                {/* Top nav items */}
-                <ul className="space-y-1.5">
-                  {mainMenu.map((item) => {
-                    const active = isActive(item);
-                    return (
-                      /* Tab highlight */
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          aria-current={active ? "page" : undefined}
-                          className={[
-                            "group flex items-center rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors duration-200 ease-in-out",
-                            active
-                              ? "text-white"
-                              : "text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40",
-                          ].join(" ")}
-                          style={{
-                            backgroundColor: active ? "#111629" : "transparent",
-                            boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
-                          }}
-                        >
-                          {/* left accent bar with animated hover */}
-                          <span
-                            className={[
-                              "mr-3 block h-5 rounded-full transition-all duration-200",
-                              // thin bar by default, grows on hover; when active we keep it wider via inline style below
-                              "w-1 group-hover:w-1.5",
-                              // on hover, use brand yellow via Tailwind arbitrary value
-                              "group-hover:bg-[#F7D949]",
-                            ].join(" ")}
-                            style={{ backgroundColor: active ? '#D3F501': "transparent" }}
-                          />
-
-                          {item.key === "messages" && (
-                            <Image
-                              src="/messages-icon.svg"
-                              alt="Messages"
-                              width={20}
-                              height={20}
-                              className="shrink-0 mr-2"
-                            />
-                          )}
-                          <span className="truncate">{item.label}</span>
-                          {item.key === "messages" && unreadTotal > 0 && (
-                            <span
-                              className="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold text-slate-900 shadow-sm"
-                              style={{ backgroundColor: '#D3F501' }}
-                              aria-label={`${unreadTotal} unread messages`}
-                            >
-                              {unreadTotal > 99 ? "99+" : unreadTotal}
-                            </span>
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                {/* Bottom nav with Settings and Sign out */}
-                <div className="mt-4 border-t border-slate-200 pt-4 flex flex-col space-y-2">
-                  {settingsItem && (
-                    <Link
-                      href={settingsItem.href}
-                      aria-current={isActive(settingsItem) ? "page" : undefined}
-                      className={[
-                        "group flex items-center rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors duration-200 ease-in-out",
-                        isActive(settingsItem)
-                          ? "text-white"
-                          : "text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40",
-                      ].join(" ")}
-                      style={{
-                        backgroundColor: isActive(settingsItem) ? "#1B3F3F" : "transparent",
-                        boxShadow: isActive(settingsItem) ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
-                      }}
-                    >
-                      <span
+          {/* Row 2: Navigation (tabs on desktop, select on mobile) */}
+          <div className="h-12 hidden md:flex items-center border-t border-slate-100">
+            {/* Desktop horizontal tabs */}
+            <nav className="w-full">
+              <ul className="flex items-center gap-2">
+                {navItems.map((item) => (
+                  <li key={item.key}>
+                    {item.key === "logout" ? (
+                      <button
+                        onClick={signOut}
+                        className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                      >
+                        {item.label}
+                      </button>
+                    ) : (
+                      <Link
+                        href={item.href}
                         className={[
-                          "mr-3 block h-5 rounded-full transition-all duration-200",
-                          "w-1 group-hover:w-1.5",
-                          "group-hover:bg-[#F7D949]",
+                          "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm",
+                          isActive(item)
+                            ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]"
+                            : "border-transparent text-slate-700 hover:bg-slate-50",
                         ].join(" ")}
-                        style={{ backgroundColor: isActive(settingsItem) ? BRAND.yellow : "transparent" }}
-                      />
-                      <span className="truncate">{settingsItem.label}</span>
-                    </Link>
-                  )}
-
-                  <button
-                    onClick={handleSignOut}
-                    className="group flex items-center gap-2 rounded-xl px-4 py-3 text-[15px] font-semibold text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
-                  >
-                    <Image
-                      src="/signout-icon.svg"
-                      alt="Sign out"
-                      width={20}
-                      height={20}
-                      className="shrink-0"
-                    />
-                    <span>Sign out</span>
-                  </button>
-                </div>
-              </nav>
-            </div>
-          </aside>
-
-          {/* ================= Main content ================= */}
-          <main className="min-w-0 flex-1 h-[90vh]">
-            {/* subtle top spacing to echo inspo layout */}
-            <div className="mb-4" />
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_6px_30px_-12px_rgba(0,0,0,0.12)] md:p-8">
-              {children}
-            </div>
-          </main>
+                        aria-current={isActive(item) ? "page" : undefined}
+                      >
+                        <span>{item.label}</span>
+                        {item.badge}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
         </div>
-      </div>
+      </header>
+
+      {/* Page content */}
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6">
+        {children}
+      </main>
     </div>
   );
 }

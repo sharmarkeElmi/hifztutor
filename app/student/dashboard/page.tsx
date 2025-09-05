@@ -12,7 +12,6 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import DashboardShell from "../../components/dashboard/Shell";
 
 // Placeholder lesson type
  type Lesson = {
@@ -103,7 +102,7 @@ export default async function StudentDashboardPage() {
 
   // -------- View --------
   return (
-    <DashboardShell role="student">
+    <>
       <div className="space-y-6 sm:space-y-8">
       {/* Greeting */}
       <div className="relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm">
@@ -280,6 +279,6 @@ export default async function StudentDashboardPage() {
         )}
       </div>
       </div>
-    </DashboardShell>
+    </>
   );
 }

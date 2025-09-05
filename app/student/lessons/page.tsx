@@ -11,7 +11,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import Shell from "@/app/components/dashboard/Shell";
 
 // Lightweight types that match your DB columns used below
 type BookingRow = {
@@ -131,7 +130,7 @@ export default function StudentLessonsPage() {
   }, [bookings, now]);
 
   return (
-    <Shell role="student" activeKey="lessons">
+    <>
       <div className="p-4 md:p-6">
         <div className="relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Lessons</h1>
@@ -237,6 +236,6 @@ export default function StudentLessonsPage() {
           </div>
         )}
       </div>
-    </Shell>
+    </>
   );
 }

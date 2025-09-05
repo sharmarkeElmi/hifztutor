@@ -251,7 +251,7 @@ export default function TutorSettingsPage() {
               className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
               style={{ backgroundColor: "#F7D250" }}
             >
-              {savingEmail ? "Updating…" : "Update email"}
+              {savingEmail ? "Saving…" : "Save Changes"}
             </button>
           </div>
         </div>
@@ -295,7 +295,7 @@ export default function TutorSettingsPage() {
               className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
               style={{ backgroundColor: "#F7D250" }}
             >
-              {savingPassword ? "Updating…" : "Update password"}
+              {savingPassword ? "Saving…" : "Save Changes"}
             </button>
           </div>
         </div>
@@ -329,7 +329,7 @@ export default function TutorSettingsPage() {
               className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
               style={{ backgroundColor: "#F7D250" }}
             >
-              {savingNotifications ? "Saving…" : "Save preferences"}
+              {savingNotifications ? "Saving…" : "Save Changes"}
             </button>
           </div>
         </div>
