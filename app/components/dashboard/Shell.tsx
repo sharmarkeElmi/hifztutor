@@ -41,14 +41,12 @@ type Props = {
   activeKey?: NavKey;
   /** If provided, we will use this value and skip Supabase live fetching. */
   unreadTotal?: number;
-  /** Optional external sign-out handler (e.g., API route). */
-  handleSignOut?: () => void | Promise<void>;
   children: ReactNode;
 };
 
 
 
-export default function Shell({ role, children, activeKey, unreadTotal: unreadTotalProp, handleSignOut: handleSignOutProp }: Props) {
+export default function Shell({ role, children, activeKey, unreadTotal: unreadTotalProp }: Props) {
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -60,6 +58,16 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
   const pathname = usePathname();
   const router = useRouter();
   const [unreadTotal, setUnreadTotal] = useState<number>(unreadTotalProp ?? 0);
+  const [displayName, setDisplayName] = useState<string>("");
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    if (mobileOpen) document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
 
   // Keep local state in sync if parent provides unreadTotal
   useEffect(() => {
@@ -67,6 +75,35 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
       setUnreadTotal(unreadTotalProp);
     }
   }, [unreadTotalProp]);
+
+  // Load display name from Supabase (profiles table with fallbacks)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        // Prefer profiles.full_name, fallback to user metadata or email
+        let name: string =
+          (user.user_metadata?.full_name as string | undefined) || "";
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (prof?.full_name) name = prof.full_name;
+        if (!name) name = user.email ?? "";
+        if (!cancelled) setDisplayName(name);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   // Fetch unread total for sidebar badge (via RPC)
   const refetchUnread = useCallback(async () => {
@@ -161,24 +198,15 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
     return pathname ? (item.exact ? pathname === item.href : pathname.startsWith(item.href)) : false;
   };
 
-  const defaultSignOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    router.replace(role === "tutor" ? "/tutor/signin" : "/student/signin");
-    if (error) console.error("Sign out error:", error.message);
-  }, [router, role, supabase]);
-
   const signOut = useCallback(async () => {
-    if (handleSignOutProp) return await handleSignOutProp();
-    return defaultSignOut();
-  }, [handleSignOutProp, defaultSignOut]);
-
-  const handleSelectNav = (value: string) => {
-    if (value === "#logout") {
-      signOut();
-    } else {
-      router.push(value);
+    try {
+      await fetch("/api/auth/signout", { method: "POST" });
+    } catch {
+      // ignore
     }
-  };
+    router.replace("/");
+  }, [router]);
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -191,39 +219,41 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
               href={role === "student" ? "/student/dashboard" : "/tutor/dashboard"}
               className="inline-flex items-center gap-2"
             >
-              <Image src="/logo.svg" alt="HifzTutor" width={112} height={24} priority />
+              <Image
+                src="/logo.svg"
+                alt="HifzTutor"
+                width={120}
+                height={28}
+                priority
+                className="md:w-[140px] md:h-[32px] w-[120px] h-[28px]"
+              />
             </Link>
-            {/* Mobile dropdown inside top header row */}
-            <div className="md:hidden flex-1">
-              <label className="sr-only" htmlFor="dash-nav">Navigation</label>
-              <select
-                id="dash-nav"
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                value={navItems.find((i) => isActive(i))?.href ?? navItems[0].href}
-                onChange={(e) => handleSelectNav(e.target.value)}
+            {/* Mobile dropdown trigger (icon only) */}
+            <div className="md:hidden ml-auto">
+              <button
+                type="button"
+                aria-label="Open menu"
+                onClick={() => setMobileOpen(true)}
+                className="inline-flex items-center justify-center rounded-md p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
-                {navItems.map((item) => (
-                  <option key={item.key} value={item.href === "#logout" ? "#logout" : item.href}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                <Image src="/mobile-dropdown-icon.svg" alt="" width={24} height={24} />
+              </button>
             </div>
             {/* Right-side space reserved for future controls (e.g., refer a friend, language) */}
             <div className="hidden md:block" />
           </div>
 
           {/* Row 2: Navigation (tabs on desktop, select on mobile) */}
-          <div className="h-12 hidden md:flex items-center border-t border-slate-100">
+          <div className="h-12 hidden md:flex items-center justify-between border-t border-slate-100">
             {/* Desktop horizontal tabs */}
-            <nav className="w-full">
+            <nav className="flex-1">
               <ul className="flex items-center gap-2">
                 {navItems.map((item) => (
                   <li key={item.key}>
                     {item.key === "logout" ? (
                       <button
                         onClick={signOut}
-                        className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                        className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[15px] font-medium text-red-600 hover:bg-red-50"
                       >
                         {item.label}
                       </button>
@@ -231,24 +261,148 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
                       <Link
                         href={item.href}
                         className={[
-                          "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm",
+                          "relative inline-flex items-center gap-1 rounded-full border px-3.5 py-2 text-[15px]",
                           isActive(item)
-                            ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]"
-                            : "border-transparent text-slate-700 hover:bg-slate-50",
+                            ? "border-[#D3F501] text-[#111629] font-semibold"
+                            : "border-transparent text-slate-700 hover:bg-slate-50 font-medium",
                         ].join(" ")}
                         aria-current={isActive(item) ? "page" : undefined}
                       >
-                        <span>{item.label}</span>
+                        <span className="leading-none">{item.label}</span>
                         {item.badge}
+                        {isActive(item) ? (
+                          <span
+                            className="pointer-events-none absolute -bottom-2 left-3 right-3 h-[2px] rounded-full"
+                            style={{ backgroundColor: "#D3F501" }}
+                            aria-hidden
+                          />
+                        ) : null}
                       </Link>
                     )}
                   </li>
                 ))}
               </ul>
             </nav>
+            {/* Desktop dropdown icon (placeholder action for future overflow menu) */}
+            <button
+              type="button"
+              aria-label="Open menu"
+              className="ml-4 inline-flex items-center justify-center rounded-md p-2.5 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
+            >
+              <Image src="/desktop-dropdown-icon.svg" alt="" width={20} height={20} />
+            </button>
           </div>
         </div>
       </header>
+
+        {/* Mobile drawer (moved outside header so it overlays the whole page) */}
+        {mobileOpen && (
+          <div className="md:hidden fixed inset-0 z-40">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 backdrop-blur-[1px] bg-white/30"
+              onClick={() => setMobileOpen(false)}
+            />
+            {/* Panel */}
+            <div className="absolute right-0 top-0 h-full w-1/2 min-w-[280px] max-w-[360px] bg-white shadow-xl">
+              <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Image src="/desktop-dropdown-icon.svg" alt="" width={20} height={20} />
+                  <span className="text-base font-semibold text-slate-800 truncate max-w-[200px]">
+                    {displayName || "Your account"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
+                >
+                  <span className="block text-xl leading-none">×</span>
+                </button>
+              </div>
+              <nav className="p-2">
+                <ul className="space-y-1">
+                  {navItems
+                    .filter((item) => item.key !== "settings" && item.key !== "logout")
+                    .map((item) => (
+                      <li key={item.key}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={[
+                            "flex items-center justify-between rounded-lg px-4 py-3.5 text-[16px]",
+                            isActive(item)
+                              ? "relative pl-4 text-slate-900 font-semibold"
+                              : "hover:bg-slate-50 text-slate-700 font-medium",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
+                          ].join(" ")}
+                          aria-current={isActive(item) ? "page" : undefined}
+                        >
+                          <span>{item.label}</span>
+                          {item.badge}
+                          {isActive(item) ? (
+                            <span
+                              className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1.5 rounded-full"
+                              style={{ backgroundColor: "#D3F501" }}
+                              aria-hidden
+                            />
+                          ) : null}
+                        </Link>
+                      </li>
+                    ))}
+
+                  {/* Divider */}
+                  <li aria-hidden className="my-2">
+                    <div className="border-t border-slate-200" />
+                  </li>
+
+                  {/* Secondary: Settings + Log out */}
+                  {navItems
+                    .filter((item) => item.key === "settings" || item.key === "logout")
+                    .map((item) => (
+                      <li key={item.key}>
+                        {item.key === "logout" ? (
+                          <button
+                            onClick={() => {
+                              setMobileOpen(false);
+                              signOut();
+                            }}
+                            className="w-full text-left rounded-lg px-4 py-3.5 text-[16px] font-semibold text-red-600 hover:bg-red-50"
+                          >
+                            {item.label}
+                          </button>
+                        ) : (
+                          <Link
+                            href={item.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={[
+                              "flex items-center justify-between rounded-lg px-4 py-3.5 text-[16px]",
+                              isActive(item)
+                                ? "relative pl-4 text-slate-900 font-semibold"
+                                : "hover:bg-slate-50 text-slate-700 font-medium",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
+                            ].join(" ")}
+                            aria-current={isActive(item) ? "page" : undefined}
+                          >
+                            <span>{item.label}</span>
+                            {item.badge}
+                            {isActive(item) ? (
+                              <span
+                                className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1.5 rounded-full"
+                                style={{ backgroundColor: "#D3F501" }}
+                                aria-hidden
+                              />
+                            ) : null}
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                </ul>
+              </nav>
+            </div>
+          </div>
+        )}
 
       {/* Page content */}
       <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6">

@@ -9,7 +9,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import Shell from "@/app/components/dashboard/Shell";
 
 type BookingRow = {
   id: string;
@@ -124,7 +123,7 @@ export default function TutorLessonsPage() {
   }, [bookings, now]);
 
   return (
-    <Shell role="tutor" activeKey="lessons">
+    <>
       <div className="p-4 md:p-6">
         <h1 className="text-2xl font-semibold">Lessons</h1>
         <p className="text-muted-foreground">Your scheduled sessions with students.</p>
@@ -223,6 +222,6 @@ export default function TutorLessonsPage() {
           </div>
         )}
       </div>
-    </Shell>
+    </>
   );
 }

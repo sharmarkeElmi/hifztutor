@@ -11,8 +11,7 @@ export const runtime = 'nodejs';
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import Shell from "../../components/dashboard/Shell";
+import { createServerClient } from "@supabase/ssr";
 
 export default async function TutorDashboardPage() {
   // Next.js 15: cookies() must be awaited
@@ -23,13 +22,12 @@ export default async function TutorDashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) => {
-          cookieStore.set({ name, value, ...options });
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-        remove: (name: string, options: CookieOptions) => {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-        },
+        // In Server Components, avoid writing cookies here.
+        set() {},
+        remove() {},
       },
     }
   );
@@ -56,7 +54,7 @@ export default async function TutorDashboardPage() {
   }
 
   return (
-    <Shell role="tutor" activeKey="overview">
+    <>
       {/* Header / greeting */}
       <div className="mb-6 relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -116,6 +114,6 @@ export default async function TutorDashboardPage() {
           You have no lessons scheduled. Accept a booking to get started.
         </p>
       </div>
-    </Shell>
+    </>
   );
 }

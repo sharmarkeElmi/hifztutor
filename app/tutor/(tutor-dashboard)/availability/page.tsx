@@ -12,7 +12,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Shell from "../../components/dashboard/Shell";
 import { createBrowserClient } from "@supabase/ssr";
 
 // Helpers for UI formatting
@@ -297,7 +296,7 @@ export default function TutorAvailabilityPage() {
     };
 
     return (
-        <Shell role="tutor" activeKey="availability">
+        <>
             <div className="relative overflow-hidden rounded-xl border bg-white p-6 sm:p-7 shadow-sm mb-6">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Availability</h1>
                 <p className="text-slate-600 mt-1">Publish bookable time slots for students to reserve.</p>
@@ -684,6 +683,6 @@ export default function TutorAvailabilityPage() {
                     <div className="rounded-md bg-white px-4 py-3 text-sm shadow">Loading…</div>
                 </div>
             )}
-        </Shell>
+        </>
     );
 }
