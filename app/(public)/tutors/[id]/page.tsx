@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Footer from "@/app/components/Footer";
-import SlotHoldModal from "@/app/components/booking/SlotHoldModal";
+import SlotHoldModal from "@features/booking/components/SlotHoldModal";
 
 type ProfileRow = {
   full_name: string | null;

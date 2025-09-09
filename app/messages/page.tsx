@@ -12,11 +12,11 @@
  */
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import Shell from "../components/dashboard/Shell";
+import Shell from "@shells/DashboardShell";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
 import { useSearchParams } from "next/navigation";
-import MessagesShell from "../components/messages/MessagesShell";
+import MessagesShell from "@shells/MessagesShell";
 
 // Types for a simple 1:1 conversation schema
 type Conversation = {

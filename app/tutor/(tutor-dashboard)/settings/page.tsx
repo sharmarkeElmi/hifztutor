@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import SettingsShell, { type SettingsTab } from "../../../components/settings/SettingsShell";
+import SettingsShell, { type SettingsTab } from "@shells/SettingsShell";
 
 // --- Tabs config (tutor) ---
 const TABS: SettingsTab[] = [

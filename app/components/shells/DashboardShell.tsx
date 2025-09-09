@@ -1,4 +1,4 @@
-// app/components/dashboard/Shell.tsx
+// app/@shells/DashboardShell.tsx
 "use client";
 
 /**

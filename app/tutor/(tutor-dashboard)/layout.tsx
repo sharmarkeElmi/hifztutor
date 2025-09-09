@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import DashboardShell from "@/app/components/dashboard/Shell";
+import DashboardShell from "@shells/DashboardShell";
 
 export default function TutorLayout({ children }: { children: ReactNode }) {
   return (
