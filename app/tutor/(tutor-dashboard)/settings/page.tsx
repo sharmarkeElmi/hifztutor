@@ -7,6 +7,9 @@ import SettingsShell, { type SettingsTab } from "@shells/SettingsShell";
 import PasswordForm, { type PasswordFormValues } from "@features/settings/components/PasswordForm";
 import EmailChangeForm, { type EmailChangeValues } from "@features/settings/components/EmailChangeForm";
 import NotificationsForm, { type NotificationsValues } from "@features/settings/components/NotificationsForm";
+import useUpdatePassword from "@features/settings/hooks/useUpdatePassword";
+import useChangeEmail from "@features/settings/hooks/useChangeEmail";
+import useUpdateNotifications from "@features/settings/hooks/useUpdateNotifications";
 
 // --- Tabs config (tutor) ---
 const TABS: SettingsTab[] = [
@@ -33,6 +36,9 @@ function getErrorMessage(err: unknown): string {
 }
 
 export default function TutorSettingsPage() {
+  const updatePassword = useUpdatePassword();
+  const changeEmail = useChangeEmail();
+  const updateNotifications = useUpdateNotifications();
   const params = useSearchParams();
   const activeKey = useMemo(() => {
     const key = params.get("tab") || "email";
@@ -89,18 +95,10 @@ export default function TutorSettingsPage() {
         setStatus({ type: "error", message: "Please enter a valid email address." });
         return;
       }
-      // Call API directly for now; replace with changeEmail() hook later if desired
-      const res = await fetch("/api/settings/email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: newEmail }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; maybeVerificationRequired?: boolean };
-      if (!res.ok) throw new Error(j.error || (res.status === 401 ? "Not signed in" : "Failed"));
+      const r = (await changeEmail({ newEmail })) as { maybeVerificationRequired?: boolean } | void;
       setStatus({
         type: "success",
-        message: j.maybeVerificationRequired
+        message: r?.maybeVerificationRequired
           ? "Email updated. Check your inbox if verification is required."
           : "Email updated.",
       });
@@ -123,15 +121,11 @@ export default function TutorSettingsPage() {
         setStatus({ type: "error", message: "Passwords do not match" });
         return;
       }
-      // Call API directly for now; also invoke hook for parity
-      const res = await fetch("/api/settings/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ newPassword: values.newPassword }),
+      await updatePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+        confirmNewPassword: values.confirmNewPassword,
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(j.error || (res.status === 401 ? "Not signed in" : "Failed"));
       setStatus({ type: "success", message: "Password updated" });
     } catch (err: unknown) {
       setStatus({ type: "error", message: getErrorMessage(err) || "Could not update password" });
@@ -144,23 +138,10 @@ export default function TutorSettingsPage() {
     setSavingNotifications(true);
     setStatus(null);
     try {
-      // Map the limited form fields to the fuller payload/state
-      const payload = {
-        lesson_reminders: values.lessonReminders,
-        messages: notifications.messages,
-        receipts: true, // tutors may want receipts
-        product_updates: values.marketingEmails,
-        digest: notifications.digest,
-        quiet_hours: notifications.quietHours,
-      } as const;
-      const res = await fetch("/api/settings/notifications", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
+      await updateNotifications({
+        lessonReminders: values.lessonReminders,
+        marketingEmails: values.marketingEmails,
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(j.error || (res.status === 401 ? "Not signed in" : "Failed"));
       setStatus({ type: "success", message: "Notification preferences saved" });
       // Merge back only the fields present on the form
       setNotifications((prev) => ({

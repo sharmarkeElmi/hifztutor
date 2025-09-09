@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SettingsShell, { type SettingsTab } from "@shells/SettingsShell";
+import useUpdateProfile from "@features/settings/hooks/useUpdateProfile";
+import useUpdatePassword from "@features/settings/hooks/useUpdatePassword";
+import useChangeEmail from "@features/settings/hooks/useChangeEmail";
+import useUpdateNotifications from "@features/settings/hooks/useUpdateNotifications";
 
 // NEW: feature components (extracted forms)
 import ProfileForm, { type ProfileFormValues } from "@features/settings/components/ProfileForm";
@@ -45,6 +49,10 @@ type StudentProfileState = {
 };
 
 export default function StudentSettingsPage() {
+  const updateProfile = useUpdateProfile();
+  const updatePassword = useUpdatePassword();
+  const changeEmail = useChangeEmail();
+  const updateNotifications = useUpdateNotifications();
   const params = useSearchParams();
   const activeKey = useMemo(() => {
     const key = params.get("tab") || "account";
@@ -132,20 +140,11 @@ export default function StudentSettingsPage() {
     setSavingAccount(true);
     setStatus(null);
     try {
-      const res = await fetch("/api/settings/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          fullName: values.fullName,
-          displayName: values.displayName ?? null,
-          timezone: values.timezone ?? "",
-          // NOTE: Additional fields like locale/languages/avatar are omitted here;
-          // we will extend the shared ProfileForm + schema later if needed.
-        }),
+      await updateProfile({
+        fullName: values.fullName,
+        displayName: values.displayName,
+        timezone: values.timezone,
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(j.error || "Failed");
       setStatus("Account saved");
       // reflect changes locally
       setProfile((prev) => ({
@@ -165,22 +164,10 @@ export default function StudentSettingsPage() {
     setSavingNotifications(true);
     setStatus(null);
     try {
-      const payload = {
-        lesson_reminders: values.lessonReminders,
-        messages: notifications.messages,
-        receipts: notifications.receipts,
-        product_updates: values.marketingEmails,
-        digest: notifications.digest,
-        quiet_hours: notifications.quietHours,
-      };
-      const res = await fetch("/api/settings/notifications", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
+      await updateNotifications({
+        lessonReminders: values.lessonReminders,
+        marketingEmails: values.marketingEmails,
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(j.error || "Failed");
       setStatus("Notification preferences saved");
       setNotifications((prev) => ({
         ...prev,
@@ -198,19 +185,10 @@ export default function StudentSettingsPage() {
     setSavingEmail(true);
     setStatus(null);
     try {
-      const res = await fetch("/api/settings/email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: newEmail }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; maybeVerificationRequired?: boolean };
-      if (!res.ok) throw new Error(j.error || (res.status === 401 ? "Not signed in" : "Failed"));
-      setStatus(
-        j.maybeVerificationRequired
-          ? "Email updated. Check your inbox if verification is required."
-          : "Email updated."
-      );
+      const r = (await changeEmail({ newEmail })) as { maybeVerificationRequired?: boolean } | void;
+      setStatus(r?.maybeVerificationRequired
+        ? "Email updated. Check your inbox if verification is required."
+        : "Email updated.");
     } catch (err: unknown) {
       setStatus(getErrorMessage(err) || "Could not update email");
     } finally {
@@ -226,14 +204,11 @@ export default function StudentSettingsPage() {
         setStatus("Passwords do not match");
         return;
       }
-      const res = await fetch("/api/settings/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ newPassword: values.newPassword }),
+      await updatePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+        confirmNewPassword: values.confirmNewPassword,
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(j.error || (res.status === 401 ? "Not signed in" : "Failed"));
       setStatus("Password updated");
     } catch (err: unknown) {
       setStatus(getErrorMessage(err) || "Could not update password");
