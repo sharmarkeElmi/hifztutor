@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Shell from "../../components/dashboard/Shell";
+import MessagesShell from "../../components/messages/MessagesShell";
 import { createBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
 
 // Mark a conversation as read for the current user (throttled) and broadcast to other pages
 const READ_THROTTLE_MS = 2000;
@@ -57,10 +60,18 @@ type Message = {
   created_at: string;
 };
 
+type Profile = {
+  id: string;
+  full_name: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+};
+
 export default function ThreadPage() {
   const router = useRouter();
-  const params = useParams<{ peerId: string }>();
-  const peerId = params?.peerId ?? "";
+  const params = useParams();
+  const peerId = (params?.peerId as string) ?? "";
 
   const supabase = useMemo(
     () =>
@@ -73,6 +84,7 @@ export default function ThreadPage() {
 
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [role, setRole] = useState<Role>("student");
+  const [peerProfile, setPeerProfile] = useState<Profile | null>(null);
   const [conv, setConv] = useState<Conversation | null>(null);
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,15 +92,19 @@ export default function ThreadPage() {
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollToBottom = () => {
+  const searchParams = useSearchParams();
+  const filter = (searchParams?.get("filter") as "all" | "unread" | "archived") ?? "all";
+
+  const scrollToBottom = useCallback(() => {
+    if (!listRef.current) return;
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
     });
-  };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
-    const channels: ReturnType<SupabaseClient["channel"]>[] = [];
+    const channels: RealtimeChannel[] = [];
 
     (async () => {
       try {
@@ -145,6 +161,18 @@ export default function ThreadPage() {
 
         if (!mounted || !conversation) return;
         setConv(conversation);
+
+        // Load peer profile for header/name/avatar
+        try {
+          const { data: pData } = await supabase
+            .from("profiles")
+            .select("id, full_name, display_name, avatar_url, email")
+            .eq("id", peerId)
+            .maybeSingle();
+          if (mounted) setPeerProfile((pData as Profile) ?? null);
+        } catch {
+          if (mounted) setPeerProfile(null);
+        }
 
         // Ensure membership exists (ignore duplicates)
         const { error: memErr } = await supabase
@@ -227,10 +255,11 @@ export default function ThreadPage() {
       mounted = false;
       channels.forEach((ch) => supabase.removeChannel(ch));
     };
-  }, [peerId, router, supabase]);
+  }, [peerId, supabase, scrollToBottom, router]);
 
 // Mark as read when the tab/window gains focus
 useEffect(() => {
+  if (typeof window === "undefined") return;
   if (!conv?.id || !me?.id) return;
 
   const onFocus = () => markConversationRead(supabase, conv.id, me.id);
@@ -240,6 +269,7 @@ useEffect(() => {
 
 // Also mark as read when the tab becomes visible (e.g., after switching tabs)
 useEffect(() => {
+  if (typeof document === "undefined") return;
   if (!conv?.id || !me?.id) return;
   const onVisible = () => {
     if (document.visibilityState === "visible") {
@@ -296,63 +326,136 @@ useEffect(() => {
 
   const chatWithId = conv && me ? (conv.user_a === me.id ? conv.user_b : conv.user_a) : peerId;
 
+  const peerDisplayName =
+    peerProfile?.display_name?.trim() ||
+    peerProfile?.full_name?.trim() ||
+    peerProfile?.email ||
+    String(chatWithId).slice(0, 8);
+
   return (
     <Shell role={role}>
-      <section className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Messages</h1>
-          <p className="text-sm text-slate-500">
-            Chat with user: <span className="rounded bg-slate-100 px-2 py-0.5">{chatWithId}</span>
-          </p>
-        </div>
+      <MessagesShell activeKey={filter}>
+        <div
+          className="w-full grid grid-cols-1 items-stretch md:grid-cols-[var(--inbox-sidebar-w,400px)_minmax(0,1fr)] md:divide-x md:divide-slate-200 gap-0 overflow-hidden"
+        >
+          {/* Left: conversation rail (simple version; links back to inbox and shows current peer) */}
+          <aside className="bg-white h-full overflow-y-auto" style={{ width: "var(--inbox-sidebar-w, 400px)" }}>
+            <div className="p-3">
+              <h2 className="px-2 pb-2 text-[15px] font-semibold text-slate-700">Conversations</h2>
+              <div className="divide-y divide-slate-100">
+                <Link
+                  href={`/messages${filter === "all" ? "" : `?filter=${filter}`}`}
+                  className="flex items-center gap-3 px-2 py-3 hover:bg-slate-50"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[12px] font-semibold text-slate-700">🏠</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-medium text-slate-900">All conversations</p>
+                    <p className="truncate text-[13px] text-slate-600">Back to inbox</p>
+                  </div>
+                </Link>
 
-        <div className="rounded-lg border border-slate-200 bg-white">
-          <div ref={listRef} className="h-[60vh] overflow-y-auto px-4 py-4">
-            {msgs.map((m) => {
-              const mine = m.sender_id === me.id;
-              return (
-                <div key={m.id} className={`mb-3 flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[70%] rounded-lg border px-3 py-2 text-sm shadow-sm ${
-                      mine ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-200"
-                    }`}
-                  >
-                    <div>{m.content}</div>
-                    <div className="mt-1 text-[10px] text-slate-400">
-                      {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                <Link
+                  href={`/messages/${chatWithId}${filter === "all" ? "" : `?filter=${filter}`}`}
+                  className="flex items-center gap-3 px-2 py-3 bg-slate-50"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[12px] font-semibold text-slate-700">{String(chatWithId).slice(0,2).toUpperCase()}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-medium text-[#111629]">Current chat</p>
+                    <p className="truncate text-[13px] text-slate-600">Selected</p>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          </aside>
+
+          {/* Right: thread pane */}
+          <section className="bg-white h-full flex flex-col">
+            {/* Sticky chat header */}
+            <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4">
+              <div className="flex items-center gap-3">
+                {peerProfile?.avatar_url ? (
+                  <Image
+                    src={peerProfile.avatar_url}
+                    alt={peerDisplayName}
+                    width={40}
+                    height={40}
+                    unoptimized
+                    className="h-10 w-10 rounded-md object-cover border"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-md bg-slate-100 border grid place-items-center text-sm font-semibold text-slate-700">
+                    {String(peerDisplayName).slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-lg font-semibold text-[#111629] truncate">{peerDisplayName}</h1>
+                  <p className="text-xs sm:text-sm text-slate-500 truncate">Private conversation</p>
+                </div>
+              </div>
+            </div>
+
+            <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+              {msgs.map((m, idx) => {
+                const mine = m.sender_id === me.id;
+                // Show sender label when the sender changes from previous message
+                const prev = msgs[idx - 1];
+                const changedSender = !prev || prev.sender_id !== m.sender_id;
+                const senderLabel = mine ? "You" : peerDisplayName;
+                return (
+                  <div key={m.id} className={`mb-3 ${mine ? "pl-16 pr-2" : "pr-16 pl-2"}`}>
+                    {changedSender && (
+                      <div className={`mb-1 text-xs ${mine ? "text-right" : "text-left"} text-slate-500`}>
+                        {senderLabel}
+                      </div>
+                    )}
+                    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[75%] rounded-2xl border px-3 py-2 text-[15px] leading-relaxed shadow-sm ${
+                          mine ? "bg-[#F2FFB6] border-[#D3F501]" : "bg-white border-slate-200"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                        <div className="mt-1 text-[10px] text-slate-400 text-right">
+                          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-            {!msgs.length && (
-              <p className="text-center text-sm text-slate-500">Say salaam to start the conversation.</p>
-            )}
-          </div>
+                );
+              })}
+              {!msgs.length && (
+                <p className="text-center text-sm text-slate-500">Say salaam to start the conversation.</p>
+              )}
+            </div>
 
-          <div className="flex items-center gap-2 border-t p-3">
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Type a message…"
-              className="flex-1 rounded border px-3 py-2 text-sm"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!canSend}
-              className="rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
-            >
-              {sending ? "Sending…" : "Send"}
-            </button>
-          </div>
+            <div className="border-t p-3 sm:p-4">
+              <div className="flex items-end gap-2 rounded-xl border bg-white px-3 py-2 shadow-sm">
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Write a message…"
+                  rows={1}
+                  className="min-h-[40px] max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-relaxed outline-none placeholder:text-slate-400"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!canSend}
+                  aria-label="Send message"
+                  className="grid h-10 w-10 place-items-center rounded-lg border border-[#111629] bg-[#111629] hover:bg-black disabled:opacity-40"
+                >
+                  <Image src="/send-button-icon.svg" alt="" width={20} height={20} className="h-5 w-5 invert" />
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
+      </MessagesShell>
     </Shell>
   );
 }

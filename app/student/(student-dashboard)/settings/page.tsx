@@ -284,7 +284,7 @@ export default function StudentSettingsPage() {
                         <label className="block">
                             <span className="text-sm font-medium">Full name</span>
                             <input
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={profile.fullName}
                                 onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))}
                             />
@@ -292,7 +292,7 @@ export default function StudentSettingsPage() {
                         <label className="block">
                             <span className="text-sm font-medium">Display name (optional)</span>
                             <input
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={profile.displayName}
                                 onChange={(e) => setProfile((p) => ({ ...p, displayName: e.target.value }))}
                             />
@@ -302,7 +302,7 @@ export default function StudentSettingsPage() {
                     <label className="block">
                         <span className="text-sm font-medium">Avatar URL (optional)</span>
                         <input
-                            className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                             value={profile.avatarUrl ?? ""}
                             onChange={(e) => setProfile((p) => ({ ...p, avatarUrl: e.target.value }))}
                         />
@@ -312,7 +312,7 @@ export default function StudentSettingsPage() {
                         <label className="block">
                             <span className="text-sm font-medium">Time zone</span>
                             <input
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={profile.timezone}
                                 onChange={(e) => setProfile((p) => ({ ...p, timezone: e.target.value }))}
                             />
@@ -320,7 +320,7 @@ export default function StudentSettingsPage() {
                         <label className="block">
                             <span className="text-sm font-medium">Locale</span>
                             <input
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={profile.locale}
                                 onChange={(e) => setProfile((p) => ({ ...p, locale: e.target.value }))}
                             />
@@ -328,7 +328,7 @@ export default function StudentSettingsPage() {
                         <label className="block sm:col-span-1">
                             <span className="text-sm font-medium">Languages</span>
                             <input
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={profile.languages}
                                 onChange={(e) => setProfile((p) => ({ ...p, languages: e.target.value }))}
                             />
@@ -339,8 +339,8 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleSaveAccount}
                             disabled={savingAccount}
-                            className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#F7D250" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
+                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
                         >
                             {savingAccount ? "Saving…" : "Save Changes"}
                         </button>
@@ -355,7 +355,7 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Current password</span>
                             <input
                                 type="password"
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={passwords.current}
                                 onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
                             />
@@ -364,7 +364,7 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">New password</span>
                             <input
                                 type="password"
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={passwords.new}
                                 onChange={(e) => setPasswords((p) => ({ ...p, new: e.target.value }))}
                             />
@@ -373,7 +373,7 @@ export default function StudentSettingsPage() {
                             <span className="text-sm font-medium">Confirm password</span>
                             <input
                                 type="password"
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={passwords.confirm}
                                 onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
                             />
@@ -383,8 +383,8 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleUpdatePassword}
                             disabled={savingPassword}
-                            className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#F7D250" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
+                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
                         >
                             {savingPassword ? "Saving…" : "Save Changes"}
                         </button>
@@ -398,7 +398,7 @@ export default function StudentSettingsPage() {
                         <label className="block">
                             <span className="text-sm font-medium">Email</span>
                             <input
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={account.email}
                                 onChange={(e) => setAccount((a) => ({ ...a, email: e.target.value }))}
                             />
@@ -407,7 +407,7 @@ export default function StudentSettingsPage() {
                         <label className="block">
                             <span className="text-sm font-medium">Phone (optional)</span>
                             <input
-                                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                                 value={account.phone}
                                 onChange={(e) => setAccount((a) => ({ ...a, phone: e.target.value }))}
                             />
@@ -417,8 +417,8 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleUpdateEmail}
                             disabled={savingEmail}
-                            className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#F7D250" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
+                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
                         >
                             {savingEmail ? "Saving…" : "Save Changes"}
                         </button>
@@ -452,8 +452,8 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleSaveNotifications}
                             disabled={savingNotifications}
-                            className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#F7D250" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
+                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
                         >
                             {savingNotifications ? "Saving…" : "Save Changes"}
                         </button>

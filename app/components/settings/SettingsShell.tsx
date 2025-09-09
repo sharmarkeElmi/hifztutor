@@ -47,30 +47,40 @@ export default function SettingsShell({
   const active = useMemo(() => tabs.find((t) => t.key === activeKey)?.key ?? tabs[0]?.key, [tabs, activeKey]);
 
   return (
-      <section className="relative w-full px-4 sm:px-6 lg:px-8">
+      <section className="relative w-full px-4 sm:px-6 lg:px-8 sm:mt-0">
 
       {/* Mobile horizontal tabs */}
-      <div className="sm:hidden mb-4 border-b border-slate-200">
-        <div className="-mx-4 overflow-x-auto px-4" role="tablist" aria-label="Settings tabs">
-          <div className="flex gap-3 px-1">
+      <div className="sm:hidden bg-white -mx-4 px-4 scrollbar-hide -mt-px">
+        <div
+          className="overflow-x-auto scrollbar-hide h-12 bg-white"
+          role="tablist"
+          aria-label="Settings tabs"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+        >
+          <div className="flex h-full items-center gap-4">
             {tabs.map((t) => (
               <Link
                 key={t.key}
                 href={t.href}
                 className={cx(
-                  "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F7D250] focus-visible:ring-offset-2",
+                  "relative inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[16px] sm:text-[17px] whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2",
                   t.disabled && "opacity-50 pointer-events-none",
-                  active === t.key
-                    ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]"
-                    : "border-[#CDD5E0] bg-white text-slate-700 hover:bg-slate-50"
+                  active === t.key ? "text-[#111629] font-semibold" : "text-slate-700 hover:bg-slate-50"
                 )}
                 aria-current={active === t.key ? "page" : undefined}
                 role="tab"
                 aria-selected={active === t.key}
               >
                 {t.icon ? <span className="grid place-items-center text-[13px]">{t.icon}</span> : null}
-                <span>{t.label}</span>
+                <span className="leading-none">{t.label}</span>
                 {t.badge}
+                {active === t.key ? (
+                  <span
+                    className="pointer-events-none absolute -bottom-1 left-2 right-2 h-[3px] rounded-full"
+                    style={{ backgroundColor: "#D3F501" }}
+                    aria-hidden
+                  />
+                ) : null}
               </Link>
             ))}
           </div>
@@ -81,32 +91,29 @@ export default function SettingsShell({
         {/* Left rail nav */}
         <nav aria-label="Settings sections" className="hidden sm:block sm:w-56 shrink-0">
           <div className="sticky top-20">
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {tabs.map((t) => (
                 <li key={t.key}>
                   <Link
                     href={t.href}
                     className={cx(
-                      "group flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F7D250] focus-visible:ring-offset-2",
+                      "group flex items-center gap-2.5 rounded-md px-3.5 py-2.5 text-[16px] sm:text-[17px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2",
                       t.disabled && "opacity-50 pointer-events-none",
-                      active === t.key
-                        ? "border-[#F7D250] bg-[#FFF3C2] text-[#111629]"
-                        : "border-transparent bg-transparent text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                      active === t.key ? "text-[#111629] font-semibold" : "text-slate-700 hover:bg-slate-50"
                     )}
                     aria-current={active === t.key ? "page" : undefined}
                   >
                     {active === t.key ? (
-                      <span className="h-5 w-1 rounded bg-[#F7D250]" aria-hidden />
+                      <span className="h-6 w-1.5 rounded-full" style={{ backgroundColor: "#D3F501" }} aria-hidden />
                     ) : (
-                      <span className="h-5 w-1" aria-hidden />
+                      <span className="h-6 w-1.5" aria-hidden />
                     )}
                     {t.icon ? (
                       <span
                         className={cx(
-                          "grid h-8 w-8 place-items-center rounded-md border transition",
-                          active === t.key ? "border-[#F7D250]" : "border-[#CDD5E0]"
+                          "grid h-9 w-9 place-items-center rounded-md border transition",
+                          active === t.key ? "border-[#D3F501]" : "border-[#CDD5E0]"
                         )}
-                        style={active === t.key ? { background: "#FFF3C2", color: "#111629" } : {}}
                         aria-hidden
                       >
                         {t.icon}
@@ -123,32 +130,18 @@ export default function SettingsShell({
 
         {/* Content pane */}
         <div className="sm:flex-1">
-          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md transition-shadow hover:shadow-lg sm:max-w-2xl sm:mx-auto">
+          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md transition-shadow hover:shadow-lg max-w-[720px] mx-auto mt-3 sm:mt-4">
             {title ? (
               <div className="mb-4 border-b pb-3">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
+                <h1 className="text-[22px] sm:text-2xl lg:text-[30px] font-bold tracking-tight leading-snug">{title}</h1>
                 {description ? (
-                  <p className="text-slate-600 mt-1 text-sm">{description}</p>
+                  <p className="text-slate-600 mt-2 text-[16px] leading-relaxed">{description}</p>
                 ) : null}
               </div>
             ) : null}
 
             <div>
-              <style jsx>{`
-                :global(.settings-pane button) {
-                  width: 100%;
-                  border-radius: 0.5rem;
-                  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                  transition: all 0.2s;
-                }
-                :global(.settings-pane button:hover:not(:disabled)) {
-                  filter: brightness(0.95);
-                }
-                :global(.settings-pane button:active:not(:disabled)) {
-                  transform: translateY(1px);
-                }
-              `}</style>
-              <div className="settings-pane space-y-8">{children}</div>
+              <div className="settings-pane space-y-10">{children}</div>
             </div>
 
             {/* Accent blob */}
@@ -160,6 +153,24 @@ export default function SettingsShell({
           </div>
         </div>
       </div>
+      <style jsx global>{`
+        /* Hide scrollbars anywhere inside .scrollbar-hide */
+        .scrollbar-hide::-webkit-scrollbar { display: none; height: 0; width: 0; }
+        .scrollbar-hide *::-webkit-scrollbar { display: none; height: 0; width: 0; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .settings-pane button {
+          width: 100%;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+          transition: all 0.2s;
+        }
+        .settings-pane button:hover:not(:disabled) {
+          filter: brightness(0.95);
+        }
+        .settings-pane button:active:not(:disabled) {
+          transform: translateY(1px);
+        }
+      `}</style>
       </section>
   );
 }

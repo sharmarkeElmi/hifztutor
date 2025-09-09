@@ -14,10 +14,10 @@ const TABS: SettingsTab[] = [
 
 function SectionHeader({ title, desc }: { title: string; desc?: string }) {
   return (
-    <div className="mb-4">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      {desc ? <p className="mt-1 text-sm text-slate-600">{desc}</p> : null}
-      <div className="mt-3 h-px w-full bg-slate-200" />
+    <div className="mb-5">
+      <h2 className="text-[20px] sm:text-2xl font-semibold leading-snug">{title}</h2>
+      {desc ? <p className="mt-1.5 text-[15px] text-slate-600 leading-relaxed">{desc}</p> : null}
+      <div className="mt-4 h-px w-full bg-slate-200" />
     </div>
   );
 }
@@ -214,7 +214,7 @@ export default function TutorSettingsPage() {
       {status ? (
         <div
           role="status"
-          className={`mb-4 rounded-md border p-3 text-sm ${
+          className={`mb-4 rounded-md border p-3 text-[15px] ${
             status.type === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
               : "border-red-200 bg-red-50 text-red-700"
@@ -226,19 +226,19 @@ export default function TutorSettingsPage() {
 
       {activeKey === "email" && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-medium">Email</span>
+              <span className="text-[15px] sm:text-base font-medium">Email</span>
               <input
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2.5 text-base leading-tight focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                 value={account.email}
                 onChange={(e) => setAccount((a) => ({ ...a, email: e.target.value }))}
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium">Phone (optional)</span>
+              <span className="text-[15px] sm:text-base font-medium">Phone (optional)</span>
               <input
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2.5 text-base leading-tight focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                 value={account.phone}
                 onChange={(e) => setAccount((a) => ({ ...a, phone: e.target.value }))}
               />
@@ -248,8 +248,8 @@ export default function TutorSettingsPage() {
             <button
               onClick={handleUpdateEmail}
               disabled={savingEmail}
-              className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
-              style={{ backgroundColor: "#F7D250" }}
+              className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
+              style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
             >
               {savingEmail ? "Saving…" : "Save Changes"}
             </button>
@@ -259,30 +259,30 @@ export default function TutorSettingsPage() {
 
       {activeKey === "password" && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-3">
             <label className="block">
-              <span className="text-sm font-medium">Current password</span>
+              <span className="text-[15px] sm:text-base font-medium">Current password</span>
               <input
                 type="password"
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2.5 text-base leading-tight focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                 value={passwords.current}
                 onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium">New password</span>
+              <span className="text-[15px] sm:text-base font-medium">New password</span>
               <input
                 type="password"
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2.5 text-base leading-tight focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                 value={passwords.new}
                 onChange={(e) => setPasswords((p) => ({ ...p, new: e.target.value }))}
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium">Confirm password</span>
+              <span className="text-[15px] sm:text-base font-medium">Confirm password</span>
               <input
                 type="password"
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F7D250]"
+                className="mt-1.5 w-full rounded-md border border-slate-300 px-3.5 py-2.5 text-base leading-tight focus:outline-none focus:ring-2 focus:ring-[#D3F501] focus:border-[#D3F501]"
                 value={passwords.confirm}
                 onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
               />
@@ -292,8 +292,8 @@ export default function TutorSettingsPage() {
             <button
               onClick={handleUpdatePassword}
               disabled={savingPassword}
-              className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
-              style={{ backgroundColor: "#F7D250" }}
+              className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
+              style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
             >
               {savingPassword ? "Saving…" : "Save Changes"}
             </button>
@@ -303,15 +303,15 @@ export default function TutorSettingsPage() {
 
       {activeKey === "notifications" && (
         <div className="space-y-6">
-          <div className="grid gap-3">
+          <div className="grid gap-3.5">
             {EMAIL_ROWS.map((row) => (
-              <label key={row.key} className="flex items-center justify-between rounded-md border p-3">
-                <span className="text-sm">{row.label}</span>
+              <label key={row.key} className="flex items-center justify-between rounded-md border p-3.5">
+                <span className="text-[15px] sm:text-base">{row.label}</span>
                 <input
                   type="checkbox"
                   checked={notifications[row.key]}
                   onChange={(e) => setNotifications((n) => ({ ...n, [row.key]: e.target.checked }))}
-                  className="h-4 w-4"
+                  className="h-5 w-5"
                 />
               </label>
             ))}
@@ -319,15 +319,15 @@ export default function TutorSettingsPage() {
 
           <SectionHeader title="Surveys and interviews" desc="Earn rewards by offering feedback on your teaching experience." />
           <div className="rounded-md border p-4 bg-white">
-            <p className="text-sm text-slate-600">Occasionally we&apos;ll invite you to share feedback in exchange for rewards.</p>
+            <p className="text-[15px] text-slate-600 leading-relaxed">Occasionally we&apos;ll invite you to share feedback in exchange for rewards.</p>
           </div>
 
           <div className="flex justify-end">
             <button
               onClick={handleSaveNotifications}
               disabled={savingNotifications}
-              className="rounded-md px-4 py-2 text-sm text-[#111629] disabled:opacity-60"
-              style={{ backgroundColor: "#F7D250" }}
+              className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
+              style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
             >
               {savingNotifications ? "Saving…" : "Save Changes"}
             </button>
