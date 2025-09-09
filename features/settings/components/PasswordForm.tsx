@@ -82,7 +82,7 @@ export default function PasswordForm({ onSubmit, isSubmitting = false }: Passwor
         <button
           type="submit"
           disabled={isSubmitting}
-          className="h-10 px-4 rounded-md font-medium border bg-black text-white hover:opacity-90 disabled:opacity-60"
+          className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 !border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
         >
           {isSubmitting ? "Saving…" : "Update password"}
         </button>
