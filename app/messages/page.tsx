@@ -520,9 +520,9 @@ export default function MessagesInboxPage() {
   return (
     <Shell role={role} contentClassName="p-0">
       <MessagesShell activeKey={filter}>
-        <div className="w-full grid grid-cols-1 md:grid-cols-[var(--inbox-sidebar-w,400px)_minmax(0,1fr)] gap-0 md:divide-x md:divide-slate-200 overflow-hidden">
+        <div className="w-full grid grid-cols-1 items-stretch md:grid-cols-[420px_minmax(0,1fr)] bg-white md:rounded-none md:divide-x md:divide-slate-200 md:overflow-hidden gap-0 h-[calc(100vh-112px)]">
           {/* Left rail: conversations list */}
-          <aside className="bg-white h-full overflow-y-auto">
+          <aside className="bg-white md:h-full overflow-y-auto">
             <ul className="divide-y">
               {filtered.map((row) => (
                 <li key={row.id}>
@@ -586,7 +586,7 @@ export default function MessagesInboxPage() {
           </aside>
 
           {/* Right pane: conditional thread view */}
-          <section className="bg-white h-full flex flex-col">
+          <section className="bg-white md:h-full flex flex-col">
             {!selectedPeerId ? (
               <div className="relative overflow-hidden border-b bg-white p-5 sm:p-7">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Messages</h1>
@@ -627,7 +627,7 @@ export default function MessagesInboxPage() {
               </div>
             ) : (
               <>
-                <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4">
                   {loadingThread && <p className="text-center text-sm text-slate-500">Loading…</p>}
                   {msgs.map((m) => {
                     const myId = me?.id ?? "";

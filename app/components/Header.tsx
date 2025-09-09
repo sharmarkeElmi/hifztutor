@@ -20,7 +20,7 @@ const BRAND = {
 
 export default function Header() {
   return (
-    <header className="border-b border-slate-200/60 #111629">
+    <header className="border-b border-slate-200/60 relative z-50">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
         {/* Logo */}
         <Link href="/landing" aria-label="HifzTutor home" className="flex items-center gap-3">

@@ -6,81 +6,17 @@ import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Shell from "../../components/dashboard/Shell";
 import MessagesShell from "../../components/messages/MessagesShell";
-import { createBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
-
-// Mark a conversation as read for the current user (throttled) and broadcast to other pages
-const READ_THROTTLE_MS = 2000;
-const lastReadMark: Record<string, number> = {};
-
-async function markConversationRead(supabase: SupabaseClient, conversationId: string, myId: string) {
-  const now = Date.now();
-  const key = `${conversationId}:${myId}`;
-  if (lastReadMark[key] && now - lastReadMark[key] < READ_THROTTLE_MS) {
-    return;
-  }
-  lastReadMark[key] = now;
-
-  try {
-    const { error } = await supabase
-      .from("conversation_members")
-      .update({ last_read_at: new Date().toISOString() })
-      .eq("conversation_id", conversationId)
-      .eq("user_id", myId)
-      .select("conversation_id")
-      .maybeSingle();
-
-    if (error) {
-      console.warn("markConversationRead failed:", error);
-      return;
-    }
-
-    // Broadcast a lightweight "read" hint so list pages can refetch immediately (storage events fire cross-tab)
-    try {
-      const payload = { conversationId, userId: myId, at: new Date().toISOString() };
-      // Write to a volatile key so 'storage' event is triggered
-      localStorage.setItem("__hifztutor_conv_read__", JSON.stringify(payload));
-      // Immediately clear it to avoid stale values
-      localStorage.removeItem("__hifztutor_conv_read__");
-    } catch {
-      // ignore storage quota/SSR issues
-    }
-  } catch (e) {
-    console.warn("markConversationRead failed:", e);
-  }
-}
-
-type Role = "student" | "tutor";
-type Conversation = { id: string; user_a: string; user_b: string };
-type Message = {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  content: string;           // ← use `content`
-  created_at: string;
-};
-
-type Profile = {
-  id: string;
-  full_name: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  email: string | null;
-};
+import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { markConversationRead, getOrCreateConversationId, ensureMembership } from "@/lib/messages";
+import type { Role, Conversation, Message, Profile } from "@/lib/types/messages";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export default function ThreadPage() {
   const router = useRouter();
   const params = useParams();
   const peerId = (params?.peerId as string) ?? "";
 
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [role, setRole] = useState<Role>("student");
@@ -134,30 +70,18 @@ export default function ThreadPage() {
           return;
         }
 
-        // Canonical pair (a<b)
-        const [a, b] = myId < peerId ? [myId, peerId] : [peerId, myId];
-
         // Resolve or create conversation
-        const { data: upserted, error: upErr } = await supabase
-          .from("conversations")
-          .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b" })
-          .select("id,user_a,user_b")
-          .single();
-
-        let conversation: Conversation | null = upserted ?? null;
-
-        if (upErr) {
-          const { data: fetched } = await supabase
-            .from("conversations")
-            .select("id,user_a,user_b")
-            .or(`and(user_a.eq.${a},user_b.eq.${b}),and(user_a.eq.${b},user_b.eq.${a})`)
-            .maybeSingle();
-          conversation = (fetched as Conversation) ?? null;
-          if (!conversation) {
-            if (!mounted) setLoading(false);
-            return;
-          }
+        const convId = await getOrCreateConversationId(supabase, myId, peerId);
+        if (!convId) {
+          if (mounted) setLoading(false);
+          return;
         }
+        const { data: convRow } = await supabase
+          .from("conversations")
+          .select("id,user_a,user_b")
+          .eq("id", convId)
+          .single();
+        const conversation = (convRow as Conversation) ?? null;
 
         if (!mounted || !conversation) return;
         setConv(conversation);
@@ -175,12 +99,7 @@ export default function ThreadPage() {
         }
 
         // Ensure membership exists (ignore duplicates)
-        const { error: memErr } = await supabase
-          .from("conversation_members")
-          .insert({ conversation_id: conversation.id, user_id: myId })
-          .select("conversation_id")
-          .maybeSingle();
-        if (memErr && memErr.code !== "23505") console.warn("member insert error:", memErr);
+        await ensureMembership(supabase, conversation.id, myId);
 
         // Load existing messages (either ordering)
         const findBothConversations = async (a: string, b: string, fallbackId: string) => {
@@ -194,6 +113,7 @@ export default function ThreadPage() {
           return Array.from(new Set(ids));
         };
 
+        const [a, b] = myId < peerId ? [myId, peerId] : [peerId, myId];
         const convIds = await findBothConversations(a, b, conversation.id);
 
         const { data: initialMsgs, error: mErr } = await supabase

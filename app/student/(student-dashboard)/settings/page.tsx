@@ -339,8 +339,7 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleSaveAccount}
                             disabled={savingAccount}
-                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
                         >
                             {savingAccount ? "Saving…" : "Save Changes"}
                         </button>
@@ -383,8 +382,7 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleUpdatePassword}
                             disabled={savingPassword}
-                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
                         >
                             {savingPassword ? "Saving…" : "Save Changes"}
                         </button>
@@ -417,8 +415,7 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleUpdateEmail}
                             disabled={savingEmail}
-                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
                         >
                             {savingEmail ? "Saving…" : "Save Changes"}
                         </button>
@@ -452,8 +449,7 @@ export default function StudentSettingsPage() {
                         <button
                             onClick={handleSaveNotifications}
                             disabled={savingNotifications}
-                            className="rounded-md px-4 py-2 text-base font-medium text-[#111629] disabled:opacity-60"
-                            style={{ backgroundColor: "#D3F501", border: "2px solid #000" }}
+                            className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
                         >
                             {savingNotifications ? "Saving…" : "Save Changes"}
                         </button>

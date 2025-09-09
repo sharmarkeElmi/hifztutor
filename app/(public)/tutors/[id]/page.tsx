@@ -12,7 +12,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import SlotHoldModal from "@/app/components/booking/SlotHoldModal";
 
@@ -313,7 +312,6 @@ export default function PublicTutorProfilePage() {
 
   return (
     <>
-      <Header />
       <div className="mx-auto max-w-5xl p-6">
       {/* Header / Hero */}
       <section className="rounded-2xl border border-[#CDD5E0] bg-white p-6 shadow-sm">

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -138,8 +137,6 @@ export default function TutorsPage() {
 
   return (
     <>
-      <Header />
-
       <div className="mx-auto max-w-6xl px-4 py-8">
         {/* Title / Controls */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

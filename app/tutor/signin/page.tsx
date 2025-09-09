@@ -144,7 +144,7 @@ export default function TutorSignInPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute inset-y-0 right-3 my-auto h-8 px-4 text-xs rounded bg-[#1d7f63] text-white hover:bg-[#16624d] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
+                className="absolute inset-y-0 right-3 my-auto h-8 px-4 text-xs rounded bg-[#D3F501] text-black border-2 border-black hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
@@ -165,7 +165,7 @@ export default function TutorSignInPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#FFD600] text-black py-3 rounded-lg font-medium font-sans transition duration-200 hover:bg-[#e6c200] active:bg-[#cca700] focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#D3F501] text-black py-3 rounded-lg font-medium font-sans transition duration-200 border-2 border-black hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
