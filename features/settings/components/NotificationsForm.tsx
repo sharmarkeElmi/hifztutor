@@ -1,5 +1,6 @@
 // features/settings/components/NotificationsForm.tsx
 import * as React from "react";
+import { Button } from "@components/ui/button";
 
 export type NotificationsValues = {
   marketingEmails: boolean;
@@ -32,11 +33,7 @@ export default function NotificationsForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 rounded-2xl border shadow-sm bg-white">
-      <div>
-        <h2 className="text-lg font-semibold">Notifications</h2>
-        <p className="text-sm text-gray-500">Control email reminders and updates.</p>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
 
       <div className="space-y-3">
         <label className="flex items-center gap-3">
@@ -61,13 +58,9 @@ export default function NotificationsForm({
       </div>
 
       <div className="flex items-center justify-end pt-2">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 !border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
-        >
+        <Button type="submit" variant="default" disabled={isSubmitting}>
           {isSubmitting ? "Saving…" : "Save preferences"}
-        </button>
+        </Button>
       </div>
     </form>
   );

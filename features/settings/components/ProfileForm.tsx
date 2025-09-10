@@ -4,6 +4,7 @@
 // Notes: Wire real submit logic later via the onSubmit prop (and hooks in features/settings/hooks).
 
 import * as React from "react";
+import { Button } from "@components/ui/button";
 
 export type ProfileFormValues = {
   fullName: string;
@@ -43,11 +44,7 @@ export default function ProfileForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 rounded-2xl border shadow-sm bg-white">
-      <div>
-        <h2 className="text-lg font-semibold">Profile</h2>
-        <p className="text-sm text-gray-500">Update your basic information.</p>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="flex flex-col gap-1">
@@ -94,13 +91,9 @@ export default function ProfileForm({
 
       <div className="flex items-center justify-between gap-3 pt-2">
         {footerSlot ?? <div />}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 !border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
-        >
+        <Button type="submit" variant="default" disabled={isSubmitting}>
           {isSubmitting ? "Saving…" : "Save changes"}
-        </button>
+        </Button>
       </div>
     </form>
   );

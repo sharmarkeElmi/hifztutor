@@ -47,12 +47,12 @@ export default function SettingsShell({
   const active = useMemo(() => tabs.find((t) => t.key === activeKey)?.key ?? tabs[0]?.key, [tabs, activeKey]);
 
   return (
-      <section className="relative w-full px-4 sm:px-6 lg:px-8 sm:mt-0">
+      <section className="relative w-full px-0 sm:px-6 lg:px-8">
 
-      {/* Mobile horizontal tabs */}
-      <div className="sm:hidden bg-white -mx-4 px-4 scrollbar-hide -mt-px">
+      {/* Mobile horizontal tabs (true full-bleed) */}
+      <div className="block sm:hidden relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-white border-b border-t-0 border-slate-200 -mt-[6px]">
         <div
-          className="overflow-x-auto scrollbar-hide h-12 bg-white"
+          className="overflow-x-auto scrollbar-hide h-12 bg-white px-4 sm:px-6 lg:px-8"
           role="tablist"
           aria-label="Settings tabs"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}

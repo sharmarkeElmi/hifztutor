@@ -1,5 +1,6 @@
 // features/settings/components/PasswordForm.tsx
 import * as React from "react";
+import { Button } from "@components/ui/button";
 
 export type PasswordFormValues = {
   currentPassword: string;
@@ -34,11 +35,7 @@ export default function PasswordForm({ onSubmit, isSubmitting = false }: Passwor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 rounded-2xl border shadow-sm bg-white">
-      <div>
-        <h2 className="text-lg font-semibold">Password</h2>
-        <p className="text-sm text-gray-500">Update your account password.</p>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="flex flex-col gap-1">
@@ -79,13 +76,9 @@ export default function PasswordForm({ onSubmit, isSubmitting = false }: Passwor
       </div>
 
       <div className="flex items-center justify-end pt-2">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md px-4 py-2 text-base font-medium text-black bg-[#D3F501] border-2 !border-black hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
-        >
+        <Button type="submit" variant="default" disabled={isSubmitting}>
           {isSubmitting ? "Saving…" : "Update password"}
-        </button>
+        </Button>
       </div>
     </form>
   );

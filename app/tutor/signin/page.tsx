@@ -8,6 +8,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Button } from "@components/ui/button";
 import { createSupabaseBrowserClient } from "@lib/supabase/client-browser";
 import { useMemo } from "react";
 import Header from "@components/Header"; // Public navigation bar
@@ -155,13 +156,9 @@ export default function TutorSignInPage() {
           )}
 
           {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#D3F501] text-black py-3 rounded-lg font-medium font-sans transition duration-200 border-2 border-black hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <Button type="submit" variant="default" disabled={loading} className="w-full">
             {loading ? "Signing in..." : "Sign in"}
-          </button>
+          </Button>
         </form>
 
         {/* Links */}

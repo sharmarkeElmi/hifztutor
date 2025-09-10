@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SettingsShell, { type SettingsTab } from "@shells/SettingsShell";
+import { Button } from "@components/ui/button";
 
 import PasswordForm, { type PasswordFormValues } from "@features/settings/components/PasswordForm";
 import EmailChangeForm, { type EmailChangeValues } from "@features/settings/components/EmailChangeForm";
@@ -218,9 +219,7 @@ export default function TutorSettingsPage() {
             <p className="text-sm text-slate-600">Soft delete with a 30‑day recovery window — coming soon.</p>
           </div>
           <div className="flex justify-end">
-            <button className="rounded-md px-4 py-2 text-sm text-white" style={{ backgroundColor: "#e11d48" }}>
-              Delete my account
-            </button>
+            <Button type="button" variant="destructive">Delete my account</Button>
           </div>
         </div>
       )}

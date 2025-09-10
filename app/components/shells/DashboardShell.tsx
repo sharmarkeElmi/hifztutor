@@ -57,6 +57,7 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
   const pathname = usePathname();
   const router = useRouter();
   const isMessages = pathname?.startsWith("/messages");
+  const isSettings = pathname?.startsWith("/student/settings") || pathname?.startsWith("/tutor/settings");
   const [unreadTotal, setUnreadTotal] = useState<number>(unreadTotalProp ?? 0);
   const [displayName, setDisplayName] = useState<string>("");
 
@@ -392,7 +393,7 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
 
       {/* Mobile drawer (moved outside header so it overlays the whole page) */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40">
+        <div className="md:hidden fixed inset-0 z-[60]">
           {/* Backdrop */}
           <div
             className="absolute inset-0 backdrop-blur-[1px] bg-white/30"
@@ -506,6 +507,8 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
             className={[
               isMessages
                 ? "w-full px-0 pt-0 pb-0 overflow-hidden"
+                : isSettings
+                ? "w-full px-0 pt-0 pb-0"
                 : "mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6",
               contentClassName ?? "",
             ].join(" ")}
