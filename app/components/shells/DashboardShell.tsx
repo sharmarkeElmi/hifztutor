@@ -241,9 +241,35 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
                 className="md:w-[140px] md:h-[32px] w-[120px] h-[28px]"
               />
             </Link>
+            {/* Mobile quick actions: Messages + Notifications */}
+            <div className="flex md:hidden items-center gap-2 ml-auto">
+              <Link
+                href="/messages"
+                aria-label="Messages"
+                className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
+              >
+                <Image src="/Messages-icon.svg" alt="" width={22} height={22} />
+                {unreadTotal > 0 ? (
+                  <span
+                    className="absolute -top-1 -right-1 inline-flex min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-slate-900"
+                    style={{ backgroundColor: "#D3F501" }}
+                    aria-label={`${unreadTotal} unread messages`}
+                  >
+                    {unreadTotal > 99 ? "99+" : unreadTotal}
+                  </span>
+                ) : null}
+              </Link>
+              <button
+                type="button"
+                aria-label="Notifications"
+                className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
+              >
+                <Image src="/Notification-icon.svg" alt="" width={16} height={14} />
+                {/* TODO: wire unread notifications badge when available */}
+              </button>
+            </div>
             {/* Mobile dropdown trigger (icon only) */}
-            {/* Mobile dropdown trigger (icon only) */}
-            <div className="md:hidden ml-auto">
+            <div className="md:hidden">
               <button
                 type="button"
                 aria-label="Open menu"
@@ -253,8 +279,34 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
                 <Image src="/mobile-dropdown-icon.svg" alt="" width={24} height={24} />
               </button>
             </div>
-            {/* Desktop dropdown trigger + menu (right side) */}
-            <div className="hidden md:inline-flex items-center relative">
+            {/* Desktop right-side actions: Messages + Notifications + Account */}
+            <div className="hidden md:flex items-center gap-2">
+              <Link
+                href="/messages"
+                aria-label="Messages"
+                className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
+              >
+                <Image src="/Messages-icon.svg" alt="" width={24} height={24} />
+                {unreadTotal > 0 ? (
+                  <span
+                    className="absolute -top-1 -right-1 inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-slate-900"
+                    style={{ backgroundColor: "#D3F501" }}
+                    aria-label={`${unreadTotal} unread messages`}
+                  >
+                    {unreadTotal > 99 ? "99+" : unreadTotal}
+                  </span>
+                ) : null}
+              </Link>
+              <button
+                type="button"
+                aria-label="Notifications"
+                className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
+              >
+                <Image src="/Notification-icon.svg" alt="" width={18} height={18} />
+                {/* TODO: wire unread notifications badge when available */}
+              </button>
+              {/* Account dropdown */}
+              <div className="inline-flex items-center relative">
               <button
                 type="button"
                 aria-label="Open menu"
@@ -346,8 +398,9 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
               )}
             </div>
           </div>
+          </div>
           {/* Row 2: Navigation (tabs on desktop, select on mobile) */}
-          <div className="h-12 hidden md:flex items-center justify-between border-t border-slate-100">
+          <div className="h-12 hidden md:flex items-center justify-end border-t border-slate-100">
             {/* Desktop horizontal tabs */}
             <nav className="flex-1">
               <ul className="flex items-center gap-3 md:gap-4">

@@ -63,7 +63,7 @@ export default function SettingsShell({
                 key={t.key}
                 href={t.href}
                 className={cx(
-                  "relative inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[16px] sm:text-[17px] whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2",
+                  "relative inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[16px] sm:text-[17px] whitespace-nowrap transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2 hover:text-[#111629] active:scale-[0.98]",
                   t.disabled && "opacity-50 pointer-events-none",
                   active === t.key ? "text-[#111629] font-semibold" : "text-slate-700 hover:bg-slate-50"
                 )}
@@ -76,7 +76,7 @@ export default function SettingsShell({
                 {t.badge}
                 {active === t.key ? (
                   <span
-                    className="pointer-events-none absolute -bottom-1 left-2 right-2 h-[3px] rounded-full"
+                    className="pointer-events-none absolute -bottom-1 left-3 right-3 h-[4px] rounded-full"
                     style={{ backgroundColor: "#D3F501" }}
                     aria-hidden
                   />
@@ -87,31 +87,33 @@ export default function SettingsShell({
         </div>
       </div>
 
-      <div className="sm:flex sm:items-start sm:gap-8">
+      <div className="mx-auto max-w-6xl sm:flex sm:items-start sm:gap-8">
         {/* Left rail nav */}
-        <nav aria-label="Settings sections" className="hidden sm:block sm:w-56 shrink-0">
-          <div className="sticky top-20">
-            <ul className="space-y-2.5">
+        <nav aria-label="Settings sections" className="hidden sm:block sm:w-56 shrink-0 sm:mt-12 sm:ml-4 md:ml-6">
+          <div className="sticky top-24">
+            <ul className="space-y-1">
               {tabs.map((t) => (
                 <li key={t.key}>
                   <Link
                     href={t.href}
                     className={cx(
-                      "group flex items-center gap-2.5 rounded-md px-3.5 py-2.5 text-[16px] sm:text-[17px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2",
+                      "group flex items-center gap-2.5 rounded-md px-3.5 py-2.5 text-[16px] sm:text-[17px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2 hover:bg-slate-50/80 hover:translate-x-0.5",
                       t.disabled && "opacity-50 pointer-events-none",
-                      active === t.key ? "text-[#111629] font-semibold" : "text-slate-700 hover:bg-slate-50"
+                      active === t.key ? "text-[#111629] font-bold" : "text-slate-700 hover:text-[#111629]"
                     )}
                     aria-current={active === t.key ? "page" : undefined}
                   >
                     {active === t.key ? (
-                      <span className="h-6 w-1.5 rounded-full" style={{ backgroundColor: "#D3F501" }} aria-hidden />
-                    ) : (
-                      <span className="h-6 w-1.5" aria-hidden />
-                    )}
+                      <span
+                        className="h-6 w-1.5 rounded-full transition-all duration-300"
+                        style={{ backgroundColor: "#D3F501" }}
+                        aria-hidden
+                      />
+                    ) : null}
                     {t.icon ? (
                       <span
                         className={cx(
-                          "grid h-9 w-9 place-items-center rounded-md border transition",
+                          "grid h-9 w-9 place-items-center rounded-md border transition-colors duration-200 group-hover:border-[#D3F501]",
                           active === t.key ? "border-[#D3F501]" : "border-[#CDD5E0]"
                         )}
                         aria-hidden
@@ -130,7 +132,7 @@ export default function SettingsShell({
 
         {/* Content pane */}
         <div className="sm:flex-1">
-          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md transition-shadow hover:shadow-lg max-w-[720px] mx-auto mt-3 sm:mt-4">
+          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md transition-shadow hover:shadow-lg max-w-3xl w-full mx-auto mt-6 sm:mt-12">
             {title ? (
               <div className="mb-4 border-b pb-3">
                 <h1 className="text-[22px] sm:text-2xl lg:text-[30px] font-bold tracking-tight leading-snug">{title}</h1>
