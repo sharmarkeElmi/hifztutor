@@ -255,11 +255,9 @@ useEffect(() => {
   return (
     <Shell role={role}>
       <MessagesShell activeKey={filter}>
-        <div
-          className="w-full grid grid-cols-1 items-stretch md:grid-cols-[var(--inbox-sidebar-w,400px)_minmax(0,1fr)] md:divide-x md:divide-slate-200 gap-0 overflow-hidden"
-        >
+        <div className="w-full grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200">
           {/* Left: conversation rail (simple version; links back to inbox and shows current peer) */}
-          <aside className="bg-white h-full overflow-y-auto" style={{ width: "var(--inbox-sidebar-w, 400px)" }}>
+          <aside className="bg-white h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] overflow-y-auto">
             <div className="p-3">
               <h2 className="px-2 pb-2 text-[15px] font-semibold text-slate-700">Conversations</h2>
               <div className="divide-y divide-slate-100">
@@ -289,9 +287,9 @@ useEffect(() => {
           </aside>
 
           {/* Right: thread pane */}
-          <section className="bg-white h-full flex flex-col">
+          <section className="bg-white h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] overflow-hidden flex flex-col">
             {/* Sticky chat header */}
-            <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4">
+            <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4 -mt-px">
               <div className="flex items-center gap-3">
                 {peerProfile?.avatar_url ? (
                   <Image
@@ -330,7 +328,7 @@ useEffect(() => {
                     )}
                     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                       <div
-                        className={`max-w-[75%] rounded-2xl border px-3 py-2 text-[15px] leading-relaxed shadow-sm ${
+                        className={`max-w-[70%] sm:max-w-[66%] rounded-2xl border px-3 py-2 text-[15px] leading-relaxed shadow-sm ${
                           mine ? "bg-[#F2FFB6] border-[#D3F501]" : "bg-white border-slate-200"
                         }`}
                       >
@@ -349,7 +347,7 @@ useEffect(() => {
             </div>
 
             <div className="border-t p-3 sm:p-4">
-              <div className="flex items-end gap-2 rounded-xl border bg-white px-3 py-2 shadow-sm">
+              <div className="flex items-end gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm">
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
@@ -361,7 +359,7 @@ useEffect(() => {
                   }}
                   placeholder="Write a message…"
                   rows={1}
-                  className="min-h-[40px] max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-relaxed outline-none placeholder:text-slate-400"
+                  className="min-h-[44px] max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-relaxed outline-none placeholder:text-slate-400"
                 />
                 <button
                   onClick={handleSend}

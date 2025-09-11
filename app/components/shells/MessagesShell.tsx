@@ -40,14 +40,14 @@ export default function MessagesShell({
           aria-label="Messages tabs"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
         >
-          <div className="flex h-full items-center gap-4">
+          <div className="flex h-full items-center gap-2">
             {tabs.map((t) => (
               <Link
                 key={t.key}
                 href={hrefFor(t.key)}
                 className={cx(
-                  "relative inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
-                  activeKey === t.key ? "text-[#111629] font-semibold" : "text-slate-700 hover:bg-slate-50 font-medium"
+                  "relative px-4 py-3 text-[15px] font-medium text-slate-700 hover:text-[#111629] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
+                  activeKey === t.key ? "text-[#111629] font-semibold" : ""
                 )}
                 role="tab"
                 aria-selected={activeKey === t.key}
@@ -56,7 +56,7 @@ export default function MessagesShell({
                 <span className="leading-none">{t.label}</span>
                 {activeKey === t.key ? (
                   <span
-                    className="pointer-events-none absolute -bottom-1 left-2 right-2 h-[3px] rounded-full"
+                    className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
                     style={{ backgroundColor: "#D3F501" }}
                     aria-hidden
                   />
@@ -68,18 +68,15 @@ export default function MessagesShell({
       </div>
 
       {/* Desktop sub-nav */}
-      <div
-        className="hidden sm:block border-b border-slate-200 bg-white"
-        style={{ width: "var(--inbox-sidebar-w, 420px)" }}
-      >
-        <ul className="flex items-center gap-3 md:gap-4 h-12" role="tablist" aria-label="Messages tabs">
+      <div className="hidden sm:block border-b border-slate-200 bg-white">
+        <ul className="flex items-center gap-2 h-12" role="tablist" aria-label="Messages tabs">
           {tabs.map((t) => (
             <li key={t.key}>
               <Link
                 href={hrefFor(t.key)}
                 className={cx(
-                  "relative inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[16px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
-                  activeKey === t.key ? "text-[#111629] font-semibold" : "text-slate-700 hover:bg-slate-50 font-medium"
+                  "relative px-4 py-3 text-[15px] font-medium text-slate-700 hover:text-[#111629] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
+                  activeKey === t.key ? "text-[#111629] font-semibold" : ""
                 )}
                 role="tab"
                 aria-selected={activeKey === t.key}
@@ -88,7 +85,7 @@ export default function MessagesShell({
                 <span className="leading-none">{t.label}</span>
                 {activeKey === t.key ? (
                   <span
-                    className="pointer-events-none absolute -bottom-2 left-2 right-2 h-[3px] rounded-full"
+                    className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
                     style={{ backgroundColor: "#D3F501" }}
                     aria-hidden
                   />
