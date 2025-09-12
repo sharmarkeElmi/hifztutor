@@ -329,22 +329,42 @@ export default function MessagesInboxPage() {
 
   return (
     <Shell role={role} contentClassName="p-0">
-      <MessagesShell activeKey={filter}>
-        <div className="w-full grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200">
-          {/* Left rail: conversations list */}
-          <aside className="bg-white h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] overflow-y-auto">
-            <ul>
-              {filtered.map((row) => {
-                const meta = peerMeta[row.peerId];
-                const name = meta?.name || `User ${row.peerId.slice(0, 8)}…`;
-                const avatar = meta?.avatar || null;
-                const timeOrDay = row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "";
-                const snippet = "Click to open the thread";
-                return (
-                  <li key={row.id}>
+      <MessagesShell activeKey={filter} hideDesktopTabs>
+        <div className="w-full overflow-hidden grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 h-[calc(100vh-7.5rem)]">
+          {/* Left rail: conversations list + desktop tabs */}
+          <aside className="bg-white flex flex-col">
+            {/* Desktop-only tabs */}
+            <div className="sticky top-0 z-10 bg-white border-b hidden md:block">
+              <div className="h-12 flex items-center gap-2 px-3">
+                <Link href={`/messages`} className={cx("relative px-4 py-3 text-[15px] font-medium transition", filter === "all" ? "text-[#111629] font-semibold" : "text-slate-700 hover:text-[#111629]")}>{"All"}
+                  {filter === "all" && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
+                </Link>
+                <Link href={`/messages?filter=unread`} className={cx("relative px-4 py-3 text-[15px] font-medium transition", filter === "unread" ? "text-[#111629] font-semibold" : "text-slate-700 hover:text-[#111629]")}>{"Unread"}
+                  {filter === "unread" && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
+                </Link>
+                <Link href={`/messages?filter=archived`} className={cx("relative px-4 py-3 text-[15px] font-medium transition", filter === "archived" ? "text-[#111629] font-semibold" : "text-slate-700 hover:text-[#111629]")}>{"Archived"}
+                  {filter === "archived" && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
+                </Link>
+              </div>
+            </div>
+            {/* Scrollable list */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <ul>
+                {filtered.map((row) => {
+                  const meta = peerMeta[row.peerId];
+                  const name = meta?.name || `User ${row.peerId.slice(0, 8)}…`;
+                  const avatar = meta?.avatar || null;
+                  const timeOrDay = row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "";
+                  const snippet = "Click to open the thread";
+                  return (
+                    <li key={row.id}>
+                    {/* TODO: highlight active conversation in [peerId]/page.tsx */}
                     <Link
                       href={`/messages/${row.peerId}${filter === "all" ? "" : `?filter=${filter}`}`}
-                      className={cx("group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-slate-50")}
+                      className={cx(
+                        "group flex items-center gap-3 px-3 py-3 transition-colors",
+                        false ? "bg-slate-50" : "hover:bg-slate-50"
+                      )}
                     >
                       <div className="relative">
                         {avatar ? (
@@ -367,14 +387,15 @@ export default function MessagesInboxPage() {
                   </li>
                 );
               })}
-              {!filtered.length && (
-                <li className="px-6 py-10 text-center text-sm text-slate-500">No conversations yet.</li>
-              )}
-            </ul>
+                {!filtered.length && (
+                  <li className="px-6 py-10 text-center text-sm text-slate-500">No conversations yet.</li>
+                )}
+              </ul>
+            </div>
           </aside>
 
           {/* Right pane: empty state */}
-          <section className="bg-white h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] overflow-hidden flex flex-col">
+          <section className="bg-white flex flex-col min-h-0">
             <div className="flex-1 grid place-items-center p-6">
               <div className="text-center max-w-md">
                 <h1 className="text-2xl font-semibold text-[#111629]">Messages</h1>

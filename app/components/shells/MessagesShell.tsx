@@ -6,13 +6,14 @@ import { cx } from "class-variance-authority";
 
 type FilterKey = "all" | "unread" | "archived";
 
-export default function MessagesShell({
-  activeKey,
-  children,
-}: {
+type MessagesShellProps = {
   activeKey: FilterKey;
   children: React.ReactNode;
-}) {
+  hideMobileTabs?: boolean;
+  hideDesktopTabs?: boolean;
+};
+
+export default function MessagesShell({ activeKey, children, hideMobileTabs, hideDesktopTabs }: MessagesShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const baseParams = new URLSearchParams(searchParams?.toString() || "");
@@ -33,68 +34,72 @@ export default function MessagesShell({
   return (
     <section className="relative w-full overflow-hidden">
       {/* Mobile sub-nav */}
-      <div className="block sm:hidden bg-white -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 scrollbar-hide border-b border-slate-200">
-        <div
-          className="overflow-x-auto scrollbar-hide h-12 bg-white"
-          role="tablist"
-          aria-label="Messages tabs"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
-        >
-          <div className="flex h-full items-center gap-2">
-            {tabs.map((t) => (
-              <Link
-                key={t.key}
-                href={hrefFor(t.key)}
-                className={cx(
-                  "relative px-4 py-3 text-[15px] font-medium text-slate-700 hover:text-[#111629] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
-                  activeKey === t.key ? "text-[#111629] font-semibold" : ""
-                )}
-                role="tab"
-                aria-selected={activeKey === t.key}
-                aria-current={activeKey === t.key ? "page" : undefined}
-              >
-                <span className="leading-none">{t.label}</span>
-                {activeKey === t.key ? (
-                  <span
-                    className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
-                    style={{ backgroundColor: "#D3F501" }}
-                    aria-hidden
-                  />
-                ) : null}
-              </Link>
-            ))}
+      {!hideMobileTabs && (
+        <div className="sm:hidden bg-white -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 scrollbar-hide border-b border-slate-200">
+          <div
+            className="overflow-x-auto scrollbar-hide h-12 bg-white"
+            role="tablist"
+            aria-label="Messages tabs"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+          >
+            <div className="flex h-full items-center gap-2">
+              {tabs.map((t) => (
+                <Link
+                  key={t.key}
+                  href={hrefFor(t.key)}
+                  className={cx(
+                    "relative px-4 py-3 text-[15px] font-medium text-slate-700 hover:text-[#111629] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
+                    activeKey === t.key ? "text-[#111629] font-semibold" : ""
+                  )}
+                  role="tab"
+                  aria-selected={activeKey === t.key}
+                  aria-current={activeKey === t.key ? "page" : undefined}
+                >
+                  <span className="leading-none">{t.label}</span>
+                  {activeKey === t.key ? (
+                    <span
+                      className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
+                      style={{ backgroundColor: "#D3F501" }}
+                      aria-hidden
+                    />
+                  ) : null}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Desktop sub-nav */}
-      <div className="hidden sm:block border-b border-slate-200 bg-white">
-        <ul className="flex items-center gap-2 h-12" role="tablist" aria-label="Messages tabs">
-          {tabs.map((t) => (
-            <li key={t.key}>
-              <Link
-                href={hrefFor(t.key)}
-                className={cx(
-                  "relative px-4 py-3 text-[15px] font-medium text-slate-700 hover:text-[#111629] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
-                  activeKey === t.key ? "text-[#111629] font-semibold" : ""
-                )}
-                role="tab"
-                aria-selected={activeKey === t.key}
-                aria-current={activeKey === t.key ? "page" : undefined}
-              >
-                <span className="leading-none">{t.label}</span>
-                {activeKey === t.key ? (
-                  <span
-                    className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
-                    style={{ backgroundColor: "#D3F501" }}
-                    aria-hidden
-                  />
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {!hideDesktopTabs && (
+        <div className="hidden sm:block border-b border-slate-200 bg-white">
+          <ul className="flex items-center gap-2 h-12" role="tablist" aria-label="Messages tabs">
+            {tabs.map((t) => (
+              <li key={t.key}>
+                <Link
+                  href={hrefFor(t.key)}
+                  className={cx(
+                    "relative px-4 py-3 text-[15px] font-medium text-slate-700 hover:text-[#111629] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
+                    activeKey === t.key ? "text-[#111629] font-semibold" : ""
+                  )}
+                  role="tab"
+                  aria-selected={activeKey === t.key}
+                  aria-current={activeKey === t.key ? "page" : undefined}
+                >
+                  <span className="leading-none">{t.label}</span>
+                  {activeKey === t.key ? (
+                    <span
+                      className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
+                      style={{ backgroundColor: "#D3F501" }}
+                      aria-hidden
+                    />
+                  ) : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Content (aligned to sub‑nav; no top gap) */}
       <div className="pt-0 pb-0 overflow-hidden">{children}</div>

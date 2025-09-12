@@ -10,6 +10,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { markConversationRead, getOrCreateConversationId, ensureMembership } from "@/lib/messages";
 import type { Role, Conversation, Message, Profile } from "@/lib/types/messages";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { Button } from "@/components/ui/button";
 
 export default function ThreadPage() {
   const router = useRouter();
@@ -254,40 +255,35 @@ useEffect(() => {
 
   return (
     <Shell role={role}>
-      <MessagesShell activeKey={filter}>
-        <div className="w-full grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200">
-          {/* Left: conversation rail (simple version; links back to inbox and shows current peer) */}
-          <aside className="bg-white h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] overflow-y-auto">
-            <div className="p-3">
-              <h2 className="px-2 pb-2 text-[15px] font-semibold text-slate-700">Conversations</h2>
-              <div className="divide-y divide-slate-100">
-                <Link
-                  href={`/messages${filter === "all" ? "" : `?filter=${filter}`}`}
-                  className="flex items-center gap-3 px-2 py-3 hover:bg-slate-50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[12px] font-semibold text-slate-700">🏠</div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-slate-900">All conversations</p>
-                    <p className="truncate text-[13px] text-slate-600">Back to inbox</p>
-                  </div>
+      <MessagesShell activeKey={filter} hideMobileTabs hideDesktopTabs>
+        <div className="w-full overflow-hidden grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 h-[calc(100vh-7.5rem)]">
+          {/* Left: conversation rail */}
+          <aside className="hidden md:flex md:flex-col bg-white">
+            {/* Desktop-only tabs above conversations */}
+            <div className="sticky top-0 z-10 bg-white border-b hidden md:block">
+              <div className="h-12 flex items-center gap-2 px-3">
+                <Link href={`/messages/${chatWithId}`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'all' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
+                  All
+                  {filter === 'all' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
                 </Link>
-
-                <Link
-                  href={`/messages/${chatWithId}${filter === "all" ? "" : `?filter=${filter}`}`}
-                  className="flex items-center gap-3 px-2 py-3 bg-slate-50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[12px] font-semibold text-slate-700">{String(chatWithId).slice(0,2).toUpperCase()}</div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-[#111629]">Current chat</p>
-                    <p className="truncate text-[13px] text-slate-600">Selected</p>
-                  </div>
+                <Link href={`/messages/${chatWithId}?filter=unread`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'unread' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
+                  Unread
+                  {filter === 'unread' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
+                </Link>
+                <Link href={`/messages/${chatWithId}?filter=archived`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'archived' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
+                  Archived
+                  {filter === 'archived' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
                 </Link>
               </div>
+            </div>
+            {/* Conversation list scrolls internally */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {/* conversation list renders here (no extra helpers) */}
             </div>
           </aside>
 
           {/* Right: thread pane */}
-          <section className="bg-white h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] overflow-hidden flex flex-col">
+          <section className="bg-white flex flex-col min-h-0 overflow-hidden">
             {/* Sticky chat header */}
             <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4 -mt-px">
               <div className="flex items-center gap-3">
@@ -361,14 +357,16 @@ useEffect(() => {
                   rows={1}
                   className="min-h-[44px] max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-relaxed outline-none placeholder:text-slate-400"
                 />
-                <button
+                <Button
                   onClick={handleSend}
                   disabled={!canSend}
                   aria-label="Send message"
-                  className="grid h-10 w-10 place-items-center rounded-lg border border-[#111629] bg-[#111629] hover:bg-black disabled:opacity-40"
+                  size="icon"
+                  variant="default"
+                  className="!bg-[#D3F501] !border-black hover:!bg-lime-400"
                 >
-                  <Image src="/send-button-icon.svg" alt="" width={20} height={20} className="h-5 w-5 invert" />
-                </button>
+                  <Image src="/send-button-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
+                </Button>
               </div>
             </div>
           </section>
