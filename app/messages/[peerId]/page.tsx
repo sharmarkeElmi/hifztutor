@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@components/ui/button";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { markConversationRead, getOrCreateConversationId, ensureMembership } from "@/lib/messages";
-import type { Role, Conversation, Message, Profile } from "@/lib/types/messages";
+import type { Conversation, Message, Profile } from "@/lib/types/messages";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export default function ThreadPage() {
@@ -17,7 +17,6 @@ export default function ThreadPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
-  const [role, setRole] = useState<Role>("student");
   const [peerProfile, setPeerProfile] = useState<Profile | null>(null);
   const [conv, setConv] = useState<Conversation | null>(null);
   const [msgs, setMsgs] = useState<Message[]>([]);
@@ -26,8 +25,7 @@ export default function ThreadPage() {
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const searchParams = useSearchParams();
-  const filter = (searchParams?.get("filter") as "all" | "unread" | "archived") ?? "all";
+  // filter from URL is not needed for thread rendering here; layout handles tabs/inbox
 
   const scrollToBottom = useCallback(() => {
     if (!listRef.current) return;
@@ -54,13 +52,7 @@ export default function ThreadPage() {
         if (!mounted) return;
         setMe({ id: myId, email: myEmail });
 
-        // Role for Shell
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", myId)
-          .maybeSingle();
-        setRole(profile?.role === "tutor" ? "tutor" : "student");
+        // Optional: role could be used for analytics or further logic; omitted from UI here
 
         if (!peerId || typeof peerId !== "string") {
           if (!mounted) return;
@@ -257,7 +249,7 @@ export default function ThreadPage() {
       {/* Messages list */}
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
         {msgs.map((m, idx) => {
-          const mine = m.sender_id === me!.id;
+          const mine = m.sender_id === (me?.id ?? "");
           const prev = msgs[idx - 1];
           const changedSender = !prev || prev.sender_id !== m.sender_id;
           const senderLabel = mine ? "You" : peerDisplayName;
@@ -308,4 +300,3 @@ export default function ThreadPage() {
     </>
   );
 }
-

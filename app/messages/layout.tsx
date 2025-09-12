@@ -1,14 +1,15 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Shell from "@shells/DashboardShell";
 import MessagesShell from "@shells/MessagesShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 
-export default function MessagesLayout({ children }: { children: React.ReactNode }) {
+export default function MessagesLayout({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const searchParams = useSearchParams();
   const params = useParams();
@@ -18,6 +19,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   const [role, setRole] = useState<"student" | "tutor">("student");
   const [conversations, setConversations] = useState<{ id: string; user_a: string; user_b: string; created_at: string }[]>([]);
   const [peerMeta, setPeerMeta] = useState<Record<string, { name: string; avatar: string | null }>>({});
+  const pathname = usePathname();
 
   useEffect(() => {
     let mounted = true;
@@ -36,9 +38,11 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         .select("id,user_a,user_b,created_at")
         .or(`user_a.eq.${myId},user_b.eq.${myId}`)
         .order("created_at", { ascending: false });
-      if (mounted && convs) setConversations(convs as any);
+      if (mounted && convs) setConversations((convs as { id: string; user_a: string; user_b: string; created_at: string }[]) ?? []);
 
-      const peerIds = Array.from(new Set((convs ?? []).map((c: any) => (c.user_a === myId ? c.user_b : c.user_a))));
+      const peerIds = Array.from(
+        new Set(((convs as { user_a: string; user_b: string }[]) ?? []).map((c) => (c.user_a === myId ? c.user_b : c.user_a)))
+      );
       if (peerIds.length) {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -46,8 +50,12 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           .in("id", peerIds);
         if (mounted && profiles) {
           const map: Record<string, { name: string; avatar: string | null }> = {};
-          for (const p of profiles) {
-            const name = (p.display_name?.trim() || p.full_name?.trim() || p.email || p.id) as string;
+          for (const p of profiles as Array<{ id: string; full_name?: string | null; display_name?: string | null; avatar_url?: string | null; email?: string | null }>) {
+            const display = p.display_name?.trim();
+            const full = p.full_name?.trim();
+            const emailLocal = (p.email ?? "").split("@")[0] || undefined;
+            const fallbackId = p.id ? p.id.slice(0, 8) : "";
+            const name = (display || full || emailLocal || fallbackId) as string;
             map[p.id] = { name, avatar: p.avatar_url ?? null };
           }
           setPeerMeta(map);
@@ -64,17 +72,24 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     return { id: c.id, peerId: pid, createdAt: new Date(c.created_at) };
   });
 
-  // Hide mobile tabs in thread view (when peerId present)
-  const hideMobileTabs = Boolean(params?.peerId);
+  // Mobile: show tabs + inbox on /messages, chat-only on /messages/[peerId]
+  const isThread = Boolean(params?.peerId);
+  const hideMobileTabs = isThread;
 
   return (
     <Shell role={role}>
       <MessagesShell activeKey={filter} hideDesktopTabs hideMobileTabs={hideMobileTabs}>
         <div className="w-full overflow-hidden grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 h-[calc(100vh-7.5rem)]">
           {/* Left: Inbox (always visible on desktop) */}
-          <aside className="hidden md:flex md:flex-col bg-white">
+          <aside
+            className={[
+              // Mobile: show inbox on /messages only; Desktop: always show
+              isThread ? "hidden" : "flex",
+              "md:flex md:flex-col bg-white h-full overflow-y-auto",
+            ].join(" ")}
+          >
             {/* Desktop-only tabs above inbox */}
-            <div className="sticky top-0 z-10 bg-white border-b">
+            <div className="sticky top-0 z-10 bg-white border-b hidden md:block">
               <div className="h-12 flex items-center gap-2 px-3">
                 <Link href={`/messages`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'all' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
                   All
@@ -96,10 +111,10 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
               <ul>
                 {filtered.map((row) => {
                   const meta = peerMeta[row.peerId];
-                  const name = meta?.name || `User ${row.peerId.slice(0, 8)}…`;
+                  const name = meta?.name || row.peerId.slice(0, 8);
                   const avatar = meta?.avatar || null;
                   const timeOrDay = row.createdAt?.toLocaleDateString() ?? "";
-                  const isActive = typeof window !== 'undefined' && window.location.pathname === `/messages/${row.peerId}`;
+                  const isActive = pathname === `/messages/${row.peerId}`;
                   return (
                     <li key={row.id}>
                       <Link
@@ -132,10 +147,17 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           </aside>
 
           {/* Right: children (empty state on /messages, thread on /messages/[peerId]) */}
-          <section className="bg-white flex flex-col min-h-0 overflow-hidden">{children}</section>
+          <section
+            className={[
+              // Mobile: hide right pane on inbox route to avoid empty-state
+              isThread ? "flex" : "hidden",
+              "md:flex bg-white flex-col min-h-0 overflow-hidden h-full",
+            ].join(" ")}
+          >
+            {children}
+          </section>
         </div>
       </MessagesShell>
     </Shell>
   );
 }
-
