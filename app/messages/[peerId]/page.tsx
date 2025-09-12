@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import Link from "next/link";
 import Image from "next/image";
+import { Button } from "@components/ui/button";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import Shell from "@shells/DashboardShell";
-import MessagesShell from "@shells/MessagesShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { markConversationRead, getOrCreateConversationId, ensureMembership } from "@/lib/messages";
 import type { Role, Conversation, Message, Profile } from "@/lib/types/messages";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { Button } from "@/components/ui/button";
 
 export default function ThreadPage() {
   const router = useRouter();
@@ -119,7 +116,7 @@ export default function ThreadPage() {
 
         const { data: initialMsgs, error: mErr } = await supabase
           .from("messages")
-          .select("id,conversation_id,sender_id,content,created_at")  // ← select `content`
+          .select("id,conversation_id,sender_id,content,created_at")
           .in("conversation_id", convIds)
           .order("created_at", { ascending: true });
 
@@ -147,11 +144,10 @@ export default function ThreadPage() {
               "postgres_changes",
               { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${id}` },
               (payload) => {
-                const newMsg = payload.new as Message; // will include `content`
+                const newMsg = payload.new as Message;
                 setMsgs((prev) => (prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]));
                 scrollToBottom();
 
-                // If a peer sent a new message while we're viewing the thread, mark as read
                 if (
                   newMsg?.sender_id &&
                   myId &&
@@ -178,48 +174,39 @@ export default function ThreadPage() {
     };
   }, [peerId, supabase, scrollToBottom, router]);
 
-// Mark as read when the tab/window gains focus
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  if (!conv?.id || !me?.id) return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!conv?.id || !me?.id) return;
+    const onFocus = () => markConversationRead(supabase, conv.id, me.id);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [conv?.id, me?.id, supabase]);
 
-  const onFocus = () => markConversationRead(supabase, conv.id, me.id);
-  window.addEventListener("focus", onFocus);
-  return () => window.removeEventListener("focus", onFocus);
-}, [conv?.id, me?.id, supabase]);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!conv?.id || !me?.id) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") markConversationRead(supabase, conv.id, me.id);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [conv?.id, me?.id, supabase]);
 
-// Also mark as read when the tab becomes visible (e.g., after switching tabs)
-useEffect(() => {
-  if (typeof document === "undefined") return;
-  if (!conv?.id || !me?.id) return;
-  const onVisible = () => {
-    if (document.visibilityState === "visible") {
-      markConversationRead(supabase, conv.id, me.id);
-    }
-  };
-  document.addEventListener("visibilitychange", onVisible);
-  return () => document.removeEventListener("visibilitychange", onVisible);
-}, [conv?.id, me?.id, supabase]);
-
-  const canSend = useMemo(
-    () => text.trim().length > 0 && !!conv && !!me && !sending,
-    [text, conv, me, sending]
-  );
+  const canSend = useMemo(() => text.trim().length > 0 && !!conv && !!me && !sending, [text, conv, me, sending]);
 
   const handleSend = async () => {
     if (!canSend || !conv || !me) return;
-    const content = text.trim();   // ← use `content`
+    const content = text.trim();
     if (!content) return;
 
     setSending(true);
     setText("");
 
-    // optimistic
     const temp: Message = {
       id: `temp-${crypto.randomUUID()}`,
       conversation_id: conv.id,
       sender_id: me.id,
-      content,                   // ← use `content`
+      content,
       created_at: new Date().toISOString(),
     };
     setMsgs((prev) => [...prev, temp]);
@@ -227,8 +214,8 @@ useEffect(() => {
 
     const { data, error } = await supabase
       .from("messages")
-      .insert({ conversation_id: conv.id, sender_id: me.id, content }) // ← insert `content`
-      .select("id,conversation_id,sender_id,content,created_at")        // ← select `content`
+      .insert({ conversation_id: conv.id, sender_id: me.id, content })
+      .select("id,conversation_id,sender_id,content,created_at")
       .single();
 
     if (error) {
@@ -245,133 +232,80 @@ useEffect(() => {
   if (loading) return <p className="p-6 text-center">Loading conversation…</p>;
   if (!me) return null;
 
-  const chatWithId = conv && me ? (conv.user_a === me.id ? conv.user_b : conv.user_a) : peerId;
-
   const peerDisplayName =
-    peerProfile?.display_name?.trim() ||
-    peerProfile?.full_name?.trim() ||
-    peerProfile?.email ||
-    String(chatWithId).slice(0, 8);
+    peerProfile?.display_name?.trim() || peerProfile?.full_name?.trim() || peerProfile?.email || String(peerId).slice(0, 8);
 
   return (
-    <Shell role={role}>
-      <MessagesShell activeKey={filter} hideMobileTabs hideDesktopTabs>
-        <div className="w-full overflow-hidden grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 h-[calc(100vh-7.5rem)]">
-          {/* Left: conversation rail */}
-          <aside className="hidden md:flex md:flex-col bg-white">
-            {/* Desktop-only tabs above conversations */}
-            <div className="sticky top-0 z-10 bg-white border-b hidden md:block">
-              <div className="h-12 flex items-center gap-2 px-3">
-                <Link href={`/messages/${chatWithId}`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'all' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
-                  All
-                  {filter === 'all' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
-                </Link>
-                <Link href={`/messages/${chatWithId}?filter=unread`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'unread' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
-                  Unread
-                  {filter === 'unread' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
-                </Link>
-                <Link href={`/messages/${chatWithId}?filter=archived`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'archived' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
-                  Archived
-                  {filter === 'archived' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
-                </Link>
-              </div>
+    <>
+      {/* Sticky chat header */}
+      <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4 -mt-px">
+        <div className="flex items-center gap-3">
+          {peerProfile?.avatar_url ? (
+            <Image src={peerProfile.avatar_url} alt={peerDisplayName} width={40} height={40} unoptimized className="h-10 w-10 rounded-md object-cover border" />
+          ) : (
+            <div className="h-10 w-10 rounded-md bg-slate-100 border grid place-items-center text-sm font-semibold text-slate-700">
+              {String(peerDisplayName).slice(0, 2).toUpperCase()}
             </div>
-            {/* Conversation list scrolls internally */}
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {/* conversation list renders here (no extra helpers) */}
-            </div>
-          </aside>
+          )}
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-semibold text-[#111629] truncate">{peerDisplayName}</h1>
+            <p className="text-xs sm:text-sm text-slate-500 truncate">Private conversation</p>
+          </div>
+        </div>
+      </div>
 
-          {/* Right: thread pane */}
-          <section className="bg-white flex flex-col min-h-0 overflow-hidden">
-            {/* Sticky chat header */}
-            <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4 -mt-px">
-              <div className="flex items-center gap-3">
-                {peerProfile?.avatar_url ? (
-                  <Image
-                    src={peerProfile.avatar_url}
-                    alt={peerDisplayName}
-                    width={40}
-                    height={40}
-                    unoptimized
-                    className="h-10 w-10 rounded-md object-cover border"
-                  />
-                ) : (
-                  <div className="h-10 w-10 rounded-md bg-slate-100 border grid place-items-center text-sm font-semibold text-slate-700">
-                    {String(peerDisplayName).slice(0, 2).toUpperCase()}
+      {/* Messages list */}
+      <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+        {msgs.map((m, idx) => {
+          const mine = m.sender_id === me!.id;
+          const prev = msgs[idx - 1];
+          const changedSender = !prev || prev.sender_id !== m.sender_id;
+          const senderLabel = mine ? "You" : peerDisplayName;
+          return (
+            <div key={m.id} className={`mb-3 ${mine ? "pl-16 pr-2" : "pr-16 pl-2"}`}>
+              {changedSender && (
+                <div className={`mb-1 text-xs ${mine ? "text-right" : "text-left"} text-slate-500`}>{senderLabel}</div>
+              )}
+              <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[70%] sm:max-w-[66%] rounded-2xl border px-3 py-2 text-[15px] leading-relaxed shadow-sm ${
+                    mine ? "bg-[#F2FFB6] border-[#D3F501]" : "bg-white border-slate-200"
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                  <div className="mt-1 text-[10px] text-slate-400 text-right">
+                    {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </div>
-                )}
-                <div className="min-w-0">
-                  <h1 className="text-base sm:text-lg font-semibold text-[#111629] truncate">{peerDisplayName}</h1>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">Private conversation</p>
                 </div>
               </div>
             </div>
+          );
+        })}
+        {!msgs.length && <p className="text-center text-sm text-slate-500">Say salaam to start the conversation.</p>}
+      </div>
 
-            <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-              {msgs.map((m, idx) => {
-                const mine = m.sender_id === me.id;
-                // Show sender label when the sender changes from previous message
-                const prev = msgs[idx - 1];
-                const changedSender = !prev || prev.sender_id !== m.sender_id;
-                const senderLabel = mine ? "You" : peerDisplayName;
-                return (
-                  <div key={m.id} className={`mb-3 ${mine ? "pl-16 pr-2" : "pr-16 pl-2"}`}>
-                    {changedSender && (
-                      <div className={`mb-1 text-xs ${mine ? "text-right" : "text-left"} text-slate-500`}>
-                        {senderLabel}
-                      </div>
-                    )}
-                    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[70%] sm:max-w-[66%] rounded-2xl border px-3 py-2 text-[15px] leading-relaxed shadow-sm ${
-                          mine ? "bg-[#F2FFB6] border-[#D3F501]" : "bg-white border-slate-200"
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap break-words">{m.content}</div>
-                        <div className="mt-1 text-[10px] text-slate-400 text-right">
-                          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {!msgs.length && (
-                <p className="text-center text-sm text-slate-500">Say salaam to start the conversation.</p>
-              )}
-            </div>
-
-            <div className="border-t p-3 sm:p-4">
-              <div className="flex items-end gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm">
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder="Write a message…"
-                  rows={1}
-                  className="min-h-[44px] max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-relaxed outline-none placeholder:text-slate-400"
-                />
-                <Button
-                  onClick={handleSend}
-                  disabled={!canSend}
-                  aria-label="Send message"
-                  size="icon"
-                  variant="default"
-                  className="!bg-[#D3F501] !border-black hover:!bg-lime-400"
-                >
-                  <Image src="/send-button-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-          </section>
+      {/* Composer */}
+      <div className="border-t p-3 sm:p-4">
+        <div className="flex items-end gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Write a message…"
+            rows={1}
+            className="min-h-[44px] max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-relaxed outline-none placeholder:text-slate-400"
+          />
+          <Button onClick={handleSend} disabled={!canSend} aria-label="Send message" size="icon" variant="default" className="!bg-[#D3F501] !border-black hover:!bg-lime-400">
+            <Image src="/send-button-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
+          </Button>
         </div>
-      </MessagesShell>
-    </Shell>
+      </div>
+    </>
   );
 }
+
