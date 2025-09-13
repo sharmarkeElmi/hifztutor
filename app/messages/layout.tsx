@@ -46,19 +46,23 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
       if (peerIds.length) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id,full_name,display_name,avatar_url,email")
+          .select("id, full_name, avatar_url")
           .in("id", peerIds);
-        if (mounted && profiles) {
-          const map: Record<string, { name: string; avatar: string | null }> = {};
-          for (const p of profiles as Array<{ id: string; full_name?: string | null; display_name?: string | null; avatar_url?: string | null; email?: string | null }>) {
-            const display = p.display_name?.trim();
-            const full = p.full_name?.trim();
-            const emailLocal = (p.email ?? "").split("@")[0] || undefined;
-            const fallbackId = p.id ? p.id.slice(0, 8) : "";
-            const name = (display || full || emailLocal || fallbackId) as string;
-            map[p.id] = { name, avatar: p.avatar_url ?? null };
+        if (mounted) {
+          if (peerIds.length > 0 && !(profiles && profiles.length)) {
+            console.warn("messages: bulk profiles returned 0 rows");
           }
-          setPeerMeta(map);
+          if (profiles && profiles.length) {
+            const map: Record<string, { name: string; avatar: string | null }> = {};
+            for (const p of profiles as Array<{ id: string; full_name?: string | null; avatar_url?: string | null }>) {
+              const full = p.full_name?.trim();
+              const fallbackId = p.id ? p.id.slice(0, 8) : "";
+              const name = (full || fallbackId) as string;
+              map[p.id] = { name, avatar: p.avatar_url ?? null };
+            }
+            // Merge into existing meta so previously known peers remain
+            setPeerMeta((prev) => ({ ...prev, ...map }));
+          }
         }
       }
     })();
@@ -111,9 +115,9 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
               <ul>
                 {filtered.map((row) => {
                   const meta = peerMeta[row.peerId];
-                  const name = meta?.name || row.peerId.slice(0, 8);
+                  const name = meta?.name ?? 'Loading…';
                   const avatar = meta?.avatar || null;
-                  const timeOrDay = row.createdAt?.toLocaleDateString() ?? "";
+                  const timeOrDay = row.createdAt?.toLocaleDateString() ?? '';
                   const isActive = pathname === `/messages/${row.peerId}`;
                   return (
                     <li key={row.id}>
@@ -125,15 +129,19 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
                         <div className="relative">
                           {avatar ? (
                             <Image src={avatar} alt={name} width={40} height={40} className="h-10 w-10 rounded-md object-cover border" />
-                          ) : (
+                          ) : meta ? (
                             <div className="h-10 w-10 grid place-items-center rounded-md bg-slate-100 border text-[12px] font-semibold text-slate-700">
                               {name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase()}
                             </div>
+                          ) : (
+                            <div className="h-10 w-10 rounded-md bg-slate-200 animate-pulse" aria-hidden="true" />
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-3">
-                            <p className="truncate text-[15px] font-semibold text-[#111629]">{name}</p>
+                            <p className="truncate text-[15px] font-semibold text-[#111629]">
+                              {meta ? name : <span className="inline-block h-3 w-24 bg-slate-200 rounded animate-pulse align-middle" aria-hidden="true" />}
+                            </p>
                             <span className="shrink-0 text-[12px] text-slate-500">{timeOrDay}</span>
                           </div>
                         </div>

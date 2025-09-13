@@ -80,7 +80,7 @@ export default function ThreadPage() {
         try {
           const { data: pData } = await supabase
             .from("profiles")
-            .select("id, full_name, display_name, avatar_url, email")
+            .select("id, full_name, avatar_url")
             .eq("id", peerId)
             .maybeSingle();
           if (mounted) setPeerProfile((pData as Profile) ?? null);
@@ -224,8 +224,11 @@ export default function ThreadPage() {
   if (loading) return <p className="p-6 text-center">Loading conversation…</p>;
   if (!me) return null;
 
-  const peerDisplayName =
-    peerProfile?.display_name?.trim() || peerProfile?.full_name?.trim() || peerProfile?.email || String(peerId).slice(0, 8);
+  const peerDisplayName = (() => {
+    const full = peerProfile?.full_name?.trim();
+    const shortId = String(peerId).slice(0, 8);
+    return full || shortId;
+  })();
 
   return (
     <>
