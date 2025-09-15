@@ -1,4 +1,4 @@
-import type { SupabaseClient, PostgrestError } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Conversation, Message, Profile, ConversationMember } from "@/lib/types/messages";
 
 // Produce a canonical ordered pair so (a,b) and (b,a) map to the same row
@@ -109,6 +109,10 @@ export async function markConversationRead(
     const payload = { conversationId, userId: myId, at: new Date().toISOString() };
     localStorage.setItem("__hifztutor_conv_read__", JSON.stringify(payload));
     localStorage.removeItem("__hifztutor_conv_read__");
+    // Notify current tab listeners to refresh counts immediately
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(READ_STATE_EVENT));
+    }
   } catch {
     // ignore storage issues (SSR/unavailable)
   }
@@ -155,3 +159,94 @@ export async function computeUnreadMap(
   return Object.fromEntries(results);
 }
 
+// ----------------------------------------------------------------------------
+// New server helpers + tab filtering + event name
+// ----------------------------------------------------------------------------
+
+
+export const READ_STATE_EVENT = "messages:read-state-changed" as const;
+
+// Lazily import server-only modules so this file stays client-safe.
+export async function getServerSupabase() {
+  const headersMod = await import("next/headers");
+  const ssrMod = await import("@supabase/ssr");
+  const cookieStore = await headersMod.cookies();
+  return ssrMod.createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll().map(({ name, value }) => ({ name, value }));
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set({ name, value, ...(options ?? {}) });
+          });
+        },
+      },
+    }
+  );
+}
+
+export type UnreadCounts = {
+  totalUnread: number;
+  perConversation: Record<string, number>;
+};
+
+// Computes per-conversation unread counts for the current user.
+export async function getUnreadCountsForUser(): Promise<UnreadCounts> {
+  try {
+    const supabase = await getServerSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { totalUnread: 0, perConversation: {} };
+
+    // Load memberships for this user to get last_read_at and conversation ids
+    const { data: memberships, error: memErr } = await supabase
+      .from("conversation_members")
+      .select("conversation_id,last_read_at")
+      .eq("user_id", user.id);
+    if (memErr) return { totalUnread: 0, perConversation: {} };
+
+    const per: Record<string, number> = {};
+    // For each membership, count messages newer than last_read_at from other senders
+    if (memberships && memberships.length) {
+      const tasks = memberships.map(async (m) => {
+        const lastRead = m.last_read_at ?? "1970-01-01T00:00:00Z";
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", m.conversation_id)
+          .neq("sender_id", user.id)
+          .gt("created_at", lastRead);
+        per[m.conversation_id] = Number(count ?? 0);
+      });
+      await Promise.all(tasks);
+    }
+
+    const totalUnread = Object.values(per).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    return { totalUnread, perConversation: per };
+  } catch {
+    return { totalUnread: 0, perConversation: {} };
+  }
+}
+
+export type MessagesTab = "all" | "unread" | "archived";
+
+// Note: archived is not currently modelled; we return empty list for that tab.
+export function filterConversationsByTab(
+  conversations: Conversation[],
+  tab: MessagesTab,
+  unreadMap: Record<string, number>
+): Conversation[] {
+  if (tab === "unread") {
+    return conversations.filter((c) => (unreadMap[c.id] ?? 0) > 0);
+  }
+  if (tab === "archived") {
+    // Placeholder until an archived flag exists
+    return [];
+  }
+  return conversations;
+}

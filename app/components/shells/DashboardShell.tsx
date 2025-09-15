@@ -19,6 +19,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { READ_STATE_EVENT } from "@/lib/messages";
 
 // 🔧 Include full set for student & tutor menus
 type NavKey =
@@ -249,15 +250,7 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
                 className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
                 <Image src="/Messages-icon.svg" alt="" width={22} height={22} />
-                {unreadTotal > 0 ? (
-                  <span
-                    className="absolute -top-1 -right-1 inline-flex min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-slate-900"
-                    style={{ backgroundColor: "#D3F501" }}
-                    aria-label={`${unreadTotal} unread messages`}
-                  >
-                    {unreadTotal > 99 ? "99+" : unreadTotal}
-                  </span>
-                ) : null}
+                <MessagesBadge small />
               </Link>
               <button
                 type="button"
@@ -287,15 +280,7 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
                 className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
                 <Image src="/Messages-icon.svg" alt="" width={24} height={24} />
-                {unreadTotal > 0 ? (
-                  <span
-                    className="absolute -top-1 -right-1 inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-slate-900"
-                    style={{ backgroundColor: "#D3F501" }}
-                    aria-label={`${unreadTotal} unread messages`}
-                  >
-                    {unreadTotal > 99 ? "99+" : unreadTotal}
-                  </span>
-                ) : null}
+                <MessagesBadge />
               </Link>
               <button
                 type="button"
@@ -571,5 +556,45 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
         );
       })()}
     </div>
+  );
+}
+
+function MessagesBadge({ small = false }: { small?: boolean }) {
+  const [count, setCount] = useState<number>(0);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/messages/unread-count", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { totalUnread?: number };
+      setCount(Number(data?.totalUnread ?? 0));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const handler = () => refresh();
+    if (typeof window !== "undefined") window.addEventListener(READ_STATE_EVENT, handler);
+    const id = setInterval(refresh, 25000);
+    return () => {
+      if (typeof window !== "undefined") window.removeEventListener(READ_STATE_EVENT, handler);
+      clearInterval(id);
+    };
+  }, [refresh]);
+
+  if (!count) return null;
+  return (
+    <span
+      className={[
+        "absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-slate-900 ring-2 ring-white",
+        small ? "min-w-[16px]" : "min-w-[18px]",
+      ].join(" ")}
+      style={{ backgroundColor: "#D3F501" }}
+      aria-label={`${count} unread messages`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }

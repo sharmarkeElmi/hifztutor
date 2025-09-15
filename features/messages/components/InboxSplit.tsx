@@ -5,9 +5,11 @@ import React from "react";
 export default function InboxSplit({
   list,
   pane,
+  unreadMap,
 }: {
   list: React.ReactNode;   // left column (conversations)
   pane: React.ReactNode;   // right column (thread or empty state)
+  unreadMap?: Record<string, number>; // optional map for per-conversation badges (consumer renders badges)
 }) {
   return (
     <div className="w-full">

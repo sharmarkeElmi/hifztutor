@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
 import { cx } from "class-variance-authority";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { READ_STATE_EVENT } from "@/lib/messages";
 
 type FilterKey = "all" | "unread" | "archived";
 
@@ -11,12 +13,53 @@ type MessagesShellProps = {
   children: React.ReactNode;
   hideMobileTabs?: boolean;
   hideDesktopTabs?: boolean;
+  initialUnreadCounts?: { totalUnread: number; perConversation: Record<string, number> };
 };
 
-export default function MessagesShell({ activeKey, children, hideMobileTabs, hideDesktopTabs }: MessagesShellProps) {
+export default function MessagesShell({ activeKey, children, hideMobileTabs, hideDesktopTabs, initialUnreadCounts }: MessagesShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const baseParams = new URLSearchParams(searchParams?.toString() || "");
+
+  const [counts, setCounts] = useState<{ totalUnread: number; perConversation: Record<string, number> }>(() => ({
+    totalUnread: initialUnreadCounts?.totalUnread ?? 0,
+    perConversation: initialUnreadCounts?.perConversation ?? {},
+  }));
+
+  const unreadConversations = useMemo(
+    () => Object.values(counts.perConversation || {}).filter((n) => (n ?? 0) > 0).length,
+    [counts.perConversation]
+  );
+
+  const refreshCounts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/messages/unread-count", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { totalUnread: number; perConversation: Record<string, number> };
+      setCounts({ totalUnread: data?.totalUnread ?? 0, perConversation: data?.perConversation ?? {} });
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    setCounts({
+      totalUnread: initialUnreadCounts?.totalUnread ?? 0,
+      perConversation: initialUnreadCounts?.perConversation ?? {},
+    });
+  }, [initialUnreadCounts?.totalUnread, initialUnreadCounts?.perConversation]);
+
+  useEffect(() => {
+    const handler = () => refreshCounts();
+    if (typeof window !== "undefined") {
+      window.addEventListener(READ_STATE_EVENT, handler);
+    }
+    const id = setInterval(refreshCounts, 20000);
+    return () => {
+      if (typeof window !== "undefined") window.removeEventListener(READ_STATE_EVENT, handler);
+      clearInterval(id);
+    };
+  }, [refreshCounts]);
 
   const tabs: { key: FilterKey; label: string }[] = [
     { key: "all", label: "All" },
@@ -56,6 +99,15 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
                   aria-current={activeKey === t.key ? "page" : undefined}
                 >
                   <span className="leading-none">{t.label}</span>
+                  {t.key === "unread" && unreadConversations > 0 ? (
+                    <span
+                      aria-label={`${unreadConversations} with unread`}
+                      className="ml-2 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-extrabold text-black ring-2 ring-white"
+                      style={{ backgroundColor: "#D3F501" }}
+                    >
+                      {unreadConversations > 99 ? "99+" : unreadConversations}
+                    </span>
+                  ) : null}
                   {activeKey === t.key ? (
                     <span
                       className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
@@ -87,6 +139,15 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
                   aria-current={activeKey === t.key ? "page" : undefined}
                 >
                   <span className="leading-none">{t.label}</span>
+                  {t.key === "unread" && unreadConversations > 0 ? (
+                    <span
+                      aria-label={`${unreadConversations} with unread`}
+                      className="ml-2 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-extrabold text-black ring-2 ring-white"
+                      style={{ backgroundColor: "#D3F501" }}
+                    >
+                      {unreadConversations > 99 ? "99+" : unreadConversations}
+                    </span>
+                  ) : null}
                   {activeKey === t.key ? (
                     <span
                       className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
