@@ -79,17 +79,18 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
   // Mobile: show tabs + inbox on /messages, chat-only on /messages/[peerId]
   const isThread = Boolean(params?.peerId);
   const hideMobileTabs = isThread;
+  const mobileHeightClass = isThread ? "h-[calc(100svh-3.5rem-1px)]" : "h-[calc(100svh-7rem-1px)]";
 
   return (
     <Shell role={role}>
       <MessagesShell activeKey={filter} hideDesktopTabs hideMobileTabs={hideMobileTabs}>
-        <div className="w-full overflow-hidden grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 h-[calc(100vh-7.5rem)]">
+        <div className={`w-full overflow-hidden overscroll-none grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 ${mobileHeightClass} md:h-[calc(100vh-7rem-1px)]`}>
           {/* Left: Inbox (always visible on desktop) */}
           <aside
             className={[
               // Mobile: show inbox on /messages only; Desktop: always show
               isThread ? "hidden" : "flex",
-              "md:flex md:flex-col bg-white h-full overflow-y-auto",
+              "md:flex md:flex-col bg-white h-full overflow-y-auto pb-[env(safe-area-inset-bottom)] md:pb-0",
             ].join(" ")}
           >
             {/* Desktop-only tabs above inbox */}
@@ -111,7 +112,7 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
             </div>
 
             {/* Inbox list scrolls inside left column */}
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain md:mb-0">
               <ul>
                 {filtered.map((row) => {
                   const meta = peerMeta[row.peerId];
@@ -159,7 +160,7 @@ export default function MessagesLayout({ children }: { children: ReactNode }) {
             className={[
               // Mobile: hide right pane on inbox route to avoid empty-state
               isThread ? "flex" : "hidden",
-              "md:flex bg-white flex-col min-h-0 overflow-hidden h-full",
+              "md:flex bg-white flex-col min-h-0 overflow-hidden h-full overscroll-contain",
             ].join(" ")}
           >
             {children}

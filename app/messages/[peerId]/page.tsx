@@ -231,7 +231,7 @@ export default function ThreadPage() {
   })();
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       {/* Sticky chat header */}
       <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4 -mt-px">
         <div className="flex items-center gap-3">
@@ -250,7 +250,7 @@ export default function ThreadPage() {
       </div>
 
       {/* Messages list */}
-      <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+      <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 sm:px-6 sm:pt-6 pb-2">
         {msgs.map((m, idx) => {
           const mine = m.sender_id === (me?.id ?? "");
           const prev = msgs[idx - 1];
@@ -280,8 +280,8 @@ export default function ThreadPage() {
       </div>
 
       {/* Composer */}
-      <div className="border-t p-3 sm:p-4">
-        <div className="flex items-end gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm">
+      <div className="sticky bottom-0 z-10 border-t bg-white p-4 sm:p-6 pb-[env(safe-area-inset-bottom)] translate-y-[-12px]">
+        <div className="flex items-center gap-3 rounded-2xl border bg-white px-3 py-2 shadow-sm">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -293,13 +293,13 @@ export default function ThreadPage() {
             }}
             placeholder="Write a message…"
             rows={1}
-            className="min-h-[44px] max-h-40 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-relaxed outline-none placeholder:text-slate-400"
+            className="h-11 max-h-40 flex-1 resize-none bg-transparent px-2 py-0 text-[15px] leading-normal outline-none placeholder:text-slate-400"
           />
-          <Button onClick={handleSend} disabled={!canSend} aria-label="Send message" size="icon" variant="default" className="!bg-[#D3F501] !border-black hover:!bg-lime-400">
+          <Button onClick={handleSend} disabled={!canSend} aria-label="Send message" size="icon" variant="default" className="h-11 w-11 !bg-[#D3F501] !border-black hover:!bg-lime-400">
             <Image src="/send-button-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
           </Button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
