@@ -307,18 +307,18 @@ export default function ThreadPage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Sticky chat header */}
-      <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur p-3 sm:p-4 -mt-px">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-10 border-b bg-white">
+        <div className="h-16 flex items-center gap-3 px-4 sm:px-6">
           {peerProfile?.avatar_url ? (
-            <Image src={peerProfile.avatar_url} alt={peerDisplayName} width={40} height={40} unoptimized className="h-10 w-10 rounded-md object-cover border" />
+            <Image src={peerProfile.avatar_url} alt={peerDisplayName} width={40} height={40} unoptimized className="h-8 w-8 sm:h-9 sm:w-9 rounded-md object-cover border" />
           ) : (
-            <div className="h-10 w-10 rounded-md bg-slate-100 border grid place-items-center text-sm font-semibold text-slate-700">
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-md bg-slate-100 border grid place-items-center text-xs sm:text-sm font-semibold text-slate-700">
               {String(peerDisplayName).slice(0, 2).toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-semibold text-[#111629] truncate">{peerDisplayName}</h1>
-            <p className="text-xs sm:text-sm text-slate-500 truncate">Private conversation</p>
+            <h1 className="text-sm sm:text-base font-semibold text-[#111629] truncate">{peerDisplayName}</h1>
+            <p className="text-[11px] sm:text-xs text-slate-500 truncate">Private conversation</p>
           </div>
         </div>
       </div>

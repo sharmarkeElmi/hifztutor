@@ -339,7 +339,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                       {item.badge}
                       {isActive(item) ? (
                         <span
-                          className="pointer-events-none absolute -bottom-2 left-2 right-2 h-[3px] rounded-full"
+                          className="pointer-events-none absolute left-0 right-0 bottom-[-6px] h-[3px] rounded-full"
                           style={{ backgroundColor: "#D3F501" }}
                           aria-hidden
                         />

@@ -131,7 +131,7 @@ export default function MessagesLayoutClient({
 
   return (
     <Shell role={role}>
-      <MessagesShell activeKey={filter} hideMobileTabs={hideMobileTabs} initialUnreadCounts={initialUnreadCounts ?? undefined}>
+      <MessagesShell activeKey={filter} hideMobileTabs={hideMobileTabs} hideDesktopTabs initialUnreadCounts={initialUnreadCounts ?? undefined}>
         <div className={`w-full overflow-hidden overscroll-none grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 ${mobileHeightClass} md:h-[calc(100vh-7rem-1px)]`}>
           {/* Left: Inbox */}
           <aside
@@ -140,7 +140,45 @@ export default function MessagesLayoutClient({
               "md:flex md:flex-col bg-white h-full overflow-y-auto pb-[env(safe-area-inset-bottom)] md:pb-0",
             ].join(" ")}
           >
-            {/* Tabs removed here; MessagesShell renders the single source of truth */}
+            {/* Desktop-only tabs header above inbox (sticky, h-12) */}
+            <div className="hidden md:block sticky top-0 z-10 bg-white border-b">
+              <div className="h-16 flex items-center gap-3 sm:gap-4 px-4 sm:px-6">
+                <Link
+                  href={`/messages?filter=all`}
+                  className={`relative inline-flex items-center rounded-md px-3.5 sm:px-4 py-2 text-[15px] sm:text-[16px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2 hover:bg-slate-50 ${filter === 'all' ? 'text-[#111629] font-bold' : 'text-slate-600 hover:text-[#111629]'}`}
+                  aria-current={filter === 'all' ? 'page' : undefined}
+                >
+                  All
+                  {filter === 'all' && (
+                    <span
+                      className="pointer-events-none absolute left-0 right-0 bottom-[-12px] h-[3px] rounded-full"
+                      style={{ backgroundColor: '#D3F501' }}
+                    />
+                  )}
+                </Link>
+                <Link
+                  href={`/messages?filter=unread`}
+                  className={`relative inline-flex items-center rounded-md px-3.5 sm:px-4 py-2 text-[15px] sm:text-[16px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-2 hover:bg-slate-50 ${filter === 'unread' ? 'text-[#111629] font-bold' : 'text-slate-600 hover:text-[#111629]'}`}
+                  aria-current={filter === 'unread' ? 'page' : undefined}
+                >
+                  Unread
+                  {filter === 'unread' && (
+                    <span
+                      className="pointer-events-none absolute left-0 right-0 bottom-[-12px] h-[3px] rounded-full"
+                      style={{ backgroundColor: '#D3F501' }}
+                    />
+                  )}
+                </Link>
+                <button
+                  type="button"
+                  title="Coming soon"
+                  aria-disabled="true"
+                  className={`relative inline-flex items-center rounded-md px-3.5 sm:px-4 py-2 text-[15px] sm:text-[16px] text-slate-400 cursor-not-allowed`}
+                >
+                  Archived
+                </button>
+              </div>
+            </div>
 
             {/* Inbox list scrolls inside left column */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain md:mb-0">
@@ -202,7 +240,7 @@ export default function MessagesLayoutClient({
             </div>
           </aside>
 
-          {/* Right: children */}
+          {/* Right: children (thread). Thread header remains sticky inside the page; aligns with left tabs */}
           <section
             className={[
               isThread ? "flex" : "hidden",
