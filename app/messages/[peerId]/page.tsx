@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Button } from "@components/ui/button";
 import { useParams, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
-import { getOrCreateConversationId, ensureMembership, ensureBothMemberships, READ_STATE_EVENT } from "@/lib/messages";
+import { getOrCreateConversationId, ensureMembership, READ_STATE_EVENT } from "@/lib/messages";
 import type { Conversation, Message, Profile } from "@/lib/types/messages";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
@@ -42,34 +42,46 @@ export default function ThreadPage() {
       if (!conversationId || !userId) return;
       if (t) clearTimeout(t);
       t = setTimeout(() => {
-        // Server-authoritative stamp to avoid client clock skew
-        fetch('/api/messages/mark-read', {
-          method: 'POST',
-          cache: 'no-store',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId }),
-        })
-          .then(async (res) => {
+        const doStamp = async (attempt = 1) => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[mark-read] stamping', { conversationId, attempt });
+          }
+          try {
+            const res = await fetch('/api/messages/mark-read', {
+              method: 'POST',
+              cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ conversationId }),
+            });
             const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+            if (res.status === 404 && attempt === 1) {
+              // Ensure membership for current user then retry once
+              await ensureMembership(supabase, conversationId, userId);
+              return doStamp(2);
+            }
             if (!res.ok || !j?.ok) {
               if (process.env.NODE_ENV !== 'production') {
                 console.warn('[mark-read] failed', j?.error || res.statusText);
               }
               return;
             }
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[mark-read] stamped ok');
+            }
             // Notify listeners to refresh unread badges immediately
             if (typeof window !== 'undefined') {
               window.dispatchEvent(new Event(READ_STATE_EVENT));
             }
-          })
-          .catch(() => {
+          } catch {
             if (process.env.NODE_ENV !== 'production') {
               console.warn('[mark-read] network error');
             }
-          });
+          }
+        };
+        void doStamp();
       }, 300);
     };
-  }, []);
+  }, [supabase]);
 
   // Expose for Safari console debugging
   useEffect(() => {
@@ -146,10 +158,11 @@ export default function ThreadPage() {
           if (mounted) setPeerProfile(null);
         }
 
-        // Ensure both participants have membership so receiver's unread works immediately
+        // Ensure my membership exists (receiver will ensure theirs on view)
         await ensureMembership(supabase, createdId, myId);
-        await ensureBothMemberships(supabase, createdId, myId, peerId);
-        console.log("[thread] memberships ensured for", myId, "and", peerId, "→", createdId);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[thread] membership ensured for', myId, '→', createdId);
+        }
 
         // Load existing messages (either ordering)
         const findBothConversations = async (a: string, b: string, fallbackId: string) => {

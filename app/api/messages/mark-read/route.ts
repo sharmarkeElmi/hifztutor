@@ -35,19 +35,27 @@ export async function POST(request: Request) {
 
     const body = (await request.json().catch(() => ({}))) as { conversationId?: string };
     const conversationId = (body?.conversationId || "").trim();
-    if (!conversationId) {
-      return NextResponse.json({ ok: false, error: "conversationId is required" }, { status: 400 });
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!conversationId || !uuidRe.test(conversationId)) {
+      return NextResponse.json({ ok: false, error: "invalid conversationId" }, { status: 400 });
     }
 
-    const { error } = await supabase
+    // Attempt to update stamp; do not insert here (avoid recursion/policy issues)
+    const { data, error } = await supabase
       .from("conversation_members")
       .update({ last_read_at: new Date().toISOString() })
       .eq("conversation_id", conversationId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .select("conversation_id,user_id,last_read_at")
+      .maybeSingle();
     if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+      const msg = process.env.NODE_ENV !== 'production' ? `update failed: ${error.message}` : 'update failed';
+      return NextResponse.json({ ok: false, error: msg }, { status: 400 });
     }
-    return NextResponse.json({ ok: true });
+    if (!data) {
+      return NextResponse.json({ ok: false, error: "membership not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, membership: data });
   } catch {
     return NextResponse.json({ ok: false, error: "Unexpected error" }, { status: 500 });
   }
