@@ -5,9 +5,17 @@ import Image from "next/image";
 import { Button } from "@components/ui/button";
 import { useParams, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
-import { markConversationRead, getOrCreateConversationId, ensureMembership } from "@/lib/messages";
+import { getOrCreateConversationId, ensureMembership, ensureBothMemberships, READ_STATE_EVENT } from "@/lib/messages";
 import type { Conversation, Message, Profile } from "@/lib/types/messages";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+
+declare global {
+  interface Window {
+    conv?: Conversation | null;
+    convId?: string | null;
+    me?: { id: string; email: string | null } | null;
+  }
+}
 
 export default function ThreadPage() {
   const router = useRouter();
@@ -24,6 +32,53 @@ export default function ThreadPage() {
   const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
+
+  const [convId, setConvId] = useState<string | null>(null);
+
+  // Debounced read-stamp to avoid spamming updates
+  const debouncedMarkRead = useMemo(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    return (conversationId: string, userId: string) => {
+      if (!conversationId || !userId) return;
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        // Server-authoritative stamp to avoid client clock skew
+        fetch('/api/messages/mark-read', {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId }),
+        })
+          .then(async (res) => {
+            const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+            if (!res.ok || !j?.ok) {
+              if (process.env.NODE_ENV !== 'production') {
+                console.warn('[mark-read] failed', j?.error || res.statusText);
+              }
+              return;
+            }
+            // Notify listeners to refresh unread badges immediately
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new Event(READ_STATE_EVENT));
+            }
+          })
+          .catch(() => {
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn('[mark-read] network error');
+            }
+          });
+      }, 300);
+    };
+  }, []);
+
+  // Expose for Safari console debugging
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.conv = conv;
+      window.convId = convId;
+      window.me = me;
+    }
+  }, [conv, convId, me]);
 
   // filter from URL is not needed for thread rendering here; layout handles tabs/inbox
 
@@ -61,15 +116,18 @@ export default function ThreadPage() {
         }
 
         // Resolve or create conversation
-        const convId = await getOrCreateConversationId(supabase, myId, peerId);
-        if (!convId) {
+        const createdId = await getOrCreateConversationId(supabase, myId, peerId);
+        console.log("[thread] getOrCreateConversationId →", createdId);
+        if (!createdId) {
           if (mounted) setLoading(false);
           return;
         }
+        if (mounted) setConvId(createdId);
+
         const { data: convRow } = await supabase
           .from("conversations")
           .select("id,user_a,user_b")
-          .eq("id", convId)
+          .eq("id", createdId)
           .single();
         const conversation = (convRow as Conversation) ?? null;
 
@@ -88,8 +146,10 @@ export default function ThreadPage() {
           if (mounted) setPeerProfile(null);
         }
 
-        // Ensure membership exists (ignore duplicates)
-        await ensureMembership(supabase, conversation.id, myId);
+        // Ensure both participants have membership so receiver's unread works immediately
+        await ensureMembership(supabase, createdId, myId);
+        await ensureBothMemberships(supabase, createdId, myId, peerId);
+        console.log("[thread] memberships ensured for", myId, "and", peerId, "→", createdId);
 
         // Load existing messages (either ordering)
         const findBothConversations = async (a: string, b: string, fallbackId: string) => {
@@ -125,7 +185,7 @@ export default function ThreadPage() {
 
         // Stamp 'read' when we land on the thread
         if (conversation?.id && myId) {
-          markConversationRead(supabase, conversation.id, myId);
+          debouncedMarkRead(conversation.id, myId);
         }
 
         // Realtime for each conv id
@@ -147,7 +207,7 @@ export default function ThreadPage() {
                   conversation?.id &&
                   document.visibilityState === "visible"
                 ) {
-                  queueMicrotask(() => markConversationRead(supabase, conversation.id, myId));
+                  queueMicrotask(() => debouncedMarkRead(conversation.id, myId));
                 }
               }
             )
@@ -164,30 +224,31 @@ export default function ThreadPage() {
       mounted = false;
       channels.forEach((ch) => supabase.removeChannel(ch));
     };
-  }, [peerId, supabase, scrollToBottom, router]);
+  }, [peerId, supabase, scrollToBottom, router, debouncedMarkRead]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!conv?.id || !me?.id) return;
-    const onFocus = () => markConversationRead(supabase, conv.id, me.id);
+    const onFocus = () => debouncedMarkRead(conv.id, me.id);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [conv?.id, me?.id, supabase]);
+  }, [conv?.id, me?.id, supabase, debouncedMarkRead]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!conv?.id || !me?.id) return;
     const onVisible = () => {
-      if (document.visibilityState === "visible") markConversationRead(supabase, conv.id, me.id);
+      if (document.visibilityState === "visible") debouncedMarkRead(conv.id, me.id);
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [conv?.id, me?.id, supabase]);
+  }, [conv?.id, me?.id, supabase, debouncedMarkRead]);
 
-  const canSend = useMemo(() => text.trim().length > 0 && !!conv && !!me && !sending, [text, conv, me, sending]);
+  const canSend = useMemo(() => text.trim().length > 0 && !!convId && !!me && !sending, [text, convId, me, sending]);
 
   const handleSend = async () => {
-    if (!canSend || !conv || !me) return;
+    console.log("[send] canSend=", canSend, "convId=", convId, "me=", me?.id, "len=", text.trim().length);
+    if (!canSend || !convId || !me) return;
     const content = text.trim();
     if (!content) return;
 
@@ -196,7 +257,7 @@ export default function ThreadPage() {
 
     const temp: Message = {
       id: `temp-${crypto.randomUUID()}`,
-      conversation_id: conv.id,
+      conversation_id: convId,
       sender_id: me.id,
       content,
       created_at: new Date().toISOString(),
@@ -206,7 +267,7 @@ export default function ThreadPage() {
 
     const { data, error } = await supabase
       .from("messages")
-      .insert({ conversation_id: conv.id, sender_id: me.id, content })
+      .insert({ conversation_id: convId, sender_id: me.id, content })
       .select("id,conversation_id,sender_id,content,created_at")
       .single();
 

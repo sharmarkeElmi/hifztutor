@@ -5,6 +5,7 @@ import { useSearchParams, usePathname } from "next/navigation";
 import { cx } from "class-variance-authority";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { READ_STATE_EVENT } from "@/lib/messages";
+import { createBrowserClient } from "@supabase/ssr";
 
 type FilterKey = "all" | "unread" | "archived";
 
@@ -25,6 +26,15 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
     totalUnread: initialUnreadCounts?.totalUnread ?? 0,
     perConversation: initialUnreadCounts?.perConversation ?? {},
   }));
+
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const unreadConversations = useMemo(
     () => Object.values(counts.perConversation || {}).filter((n) => (n ?? 0) > 0).length,
@@ -55,11 +65,43 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
       window.addEventListener(READ_STATE_EVENT, handler);
     }
     const id = setInterval(refreshCounts, 20000);
+    // Realtime refresh for new incoming messages
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const uid = data.user?.id;
+        if (!uid) return;
+        const { data: convs } = await supabase
+          .from("conversations")
+          .select("id,user_a,user_b")
+          .or(`user_a.eq.${uid},user_b.eq.${uid}`);
+        const convIds = new Set((convs ?? []).map((c: { id: string }) => c.id));
+        if (convIds.size === 0) return;
+
+        const channel = supabase
+          .channel("shell-unread")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "messages" },
+            (payload) => {
+              const row = payload.new as { conversation_id?: string; sender_id?: string };
+              if (!row?.conversation_id || !row?.sender_id) return;
+              if (!convIds.has(row.conversation_id)) return;
+              if (row.sender_id === uid) return;
+              refreshCounts();
+            }
+          )
+          .subscribe();
+        return () => {
+          try { supabase.removeChannel(channel); } catch { /* noop */ }
+        };
+      } catch { /* ignore */ }
+    })();
     return () => {
       if (typeof window !== "undefined") window.removeEventListener(READ_STATE_EVENT, handler);
       clearInterval(id);
     };
-  }, [refreshCounts]);
+  }, [refreshCounts, supabase]);
 
   const tabs: { key: FilterKey; label: string }[] = [
     { key: "all", label: "All" },
@@ -69,8 +111,7 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
 
   const hrefFor = (key: FilterKey) => {
     const p = new URLSearchParams(baseParams.toString());
-    if (key === "all") p.delete("filter");
-    else p.set("filter", key);
+    p.set("filter", key);
     return `${pathname}?${p.toString()}`.replace(/\?$/, "");
   };
 
@@ -87,6 +128,29 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
           >
             <div className="flex h-full items-center gap-2">
               {tabs.map((t) => (
+                t.key === "archived" ? (
+                  <button
+                    key={t.key}
+                    type="button"
+                    title="Coming soon"
+                    aria-disabled="true"
+                    className={cx(
+                      "relative px-4 py-3 text-[15px] font-medium text-slate-400 cursor-not-allowed",
+                      activeKey === t.key ? "text-slate-500" : ""
+                    )}
+                    role="tab"
+                    aria-selected={activeKey === t.key}
+                  >
+                    <span className="leading-none">{t.label}</span>
+                    {activeKey === t.key ? (
+                      <span
+                        className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
+                        style={{ backgroundColor: "#D3F501" }}
+                        aria-hidden
+                      />
+                    ) : null}
+                  </button>
+                ) : (
                 <Link
                   key={t.key}
                   href={hrefFor(t.key)}
@@ -116,6 +180,7 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
                     />
                   ) : null}
                 </Link>
+                )
               ))}
             </div>
           </div>
@@ -128,6 +193,28 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
           <ul className="flex items-center gap-2 h-12" role="tablist" aria-label="Messages tabs">
             {tabs.map((t) => (
               <li key={t.key}>
+                {t.key === "archived" ? (
+                  <button
+                    type="button"
+                    title="Coming soon"
+                    aria-disabled="true"
+                    className={cx(
+                      "relative px-4 py-3 text-[15px] font-medium text-slate-400 cursor-not-allowed",
+                      activeKey === t.key ? "text-slate-500" : ""
+                    )}
+                    role="tab"
+                    aria-selected={activeKey === t.key}
+                  >
+                    <span className="leading-none">{t.label}</span>
+                    {activeKey === t.key ? (
+                      <span
+                        className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full"
+                        style={{ backgroundColor: "#D3F501" }}
+                        aria-hidden
+                      />
+                    ) : null}
+                  </button>
+                ) : (
                 <Link
                   href={hrefFor(t.key)}
                   className={cx(
@@ -156,6 +243,7 @@ export default function MessagesShell({ activeKey, children, hideMobileTabs, hid
                     />
                   ) : null}
                 </Link>
+                )}
               </li>
             ))}
           </ul>

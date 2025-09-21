@@ -40,13 +40,11 @@ type Props = {
   role: "student" | "tutor";
   /** Optional explicit active key (for deep routes). */
   activeKey?: NavKey;
-  /** If provided, we will use this value and skip Supabase live fetching. */
-  unreadTotal?: number;
   contentClassName?: string;
   children: ReactNode;
 };
 
-export default function Shell({ role, children, activeKey, unreadTotal: unreadTotalProp, contentClassName }: Props) {
+export default function Shell({ role, children, activeKey, contentClassName }: Props) {
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -59,7 +57,6 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
   const router = useRouter();
   const isMessages = pathname?.startsWith("/messages");
   const isSettings = pathname?.startsWith("/student/settings") || pathname?.startsWith("/tutor/settings");
-  const [unreadTotal, setUnreadTotal] = useState<number>(unreadTotalProp ?? 0);
   const [displayName, setDisplayName] = useState<string>("");
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -84,12 +81,7 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
     return () => document.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
-  // Keep local state in sync if parent provides unreadTotal
-  useEffect(() => {
-    if (typeof unreadTotalProp === "number") {
-      setUnreadTotal(unreadTotalProp);
-    }
-  }, [unreadTotalProp]);
+  // Drop legacy unreadTotal sync; global badge now uses API polling
 
   // Load display name from Supabase (profiles table with fallbacks)
   useEffect(() => {
@@ -120,73 +112,14 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
     };
   }, [supabase]);
 
-  // Fetch unread total for sidebar badge (via RPC)
-  const refetchUnread = useCallback(async () => {
-    // Inline the user lookup to avoid a separate dependency changing every render
-    const { data } = await supabase.auth.getUser();
-    const uid = data.user?.id ?? null;
-
-    if (!uid) {
-      setUnreadTotal(0);
-      return;
-    }
-
-    const { data: count, error } = await supabase.rpc("unread_count_for_user", { uid });
-    if (error) {
-      console.warn("unread_count_for_user error", error.message);
-      return;
-    }
-    setUnreadTotal(Number(count ?? 0));
-  }, [supabase]);
-
-  // Initial load + live updates on messages or read-state changes
-  useEffect(() => {
-    if (typeof unreadTotalProp === "number") {
-      // Parent controls unreadTotal; skip live fetching
-      return;
-    }
-
-    refetchUnread();
-
-    const channel = supabase
-      .channel("sidebar-unread")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        () => refetchUnread()
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "conversation_members" },
-        () => refetchUnread()
-      )
-      .subscribe();
-
-    return () => {
-      try {
-        supabase.removeChannel(channel);
-      } catch {
-        /* noop */
-      }
-    };
-  }, [refetchUnread, supabase, unreadTotalProp]);
+  // Drop legacy Supabase RPC + realtime unread logic in favor of API-driven MessagesBadge
 
   // Unified nav list for top navigation (desktop tabs + mobile select)
   const navItems: SidebarItem[] = useMemo(() => {
-    const msgBadge =
-      unreadTotal > 0 ? (
-        <span
-          className="ml-1 inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-slate-900"
-          style={{ backgroundColor: "#D3F501" }}
-        >
-          {unreadTotal > 99 ? "99+" : unreadTotal}
-        </span>
-      ) : undefined;
-
     if (role === "student") {
       return [
         { key: "overview", label: "Home", href: "/student/dashboard", exact: true },
-        { key: "messages", label: "Messages", href: "/messages", badge: msgBadge },
+        { key: "messages", label: "Messages", href: "/messages" },
         { key: "lessons", label: "My Lessons", href: "/student/lessons" },
         { key: "saved", label: "Saved", href: "/student/saved" },
         { key: "find_tutors", label: "Find Tutors", href: "/tutors" },
@@ -196,7 +129,7 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
     } else {
       return [
         { key: "overview", label: "Home", href: "/tutor/dashboard", exact: true },
-        { key: "messages", label: "Messages", href: "/messages", badge: msgBadge },
+        { key: "messages", label: "Messages", href: "/messages" },
         { key: "lessons", label: "My Lessons", href: "/tutor/lessons" },
         { key: "classroom", label: "Classroom", href: "/tutor/classroom" },
         { key: "availability", label: "Availability", href: "/tutor/availability" },
@@ -205,7 +138,7 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
         { key: "logout", label: "Log out", href: "#logout" },
       ];
     }
-  }, [role, unreadTotal]);
+  }, [role]);
 
   const isActive = (item: SidebarItem) => {
     if (item.key === "logout") return false;
@@ -561,6 +494,14 @@ export default function Shell({ role, children, activeKey, unreadTotal: unreadTo
 
 function MessagesBadge({ small = false }: { small?: boolean }) {
   const [count, setCount] = useState<number>(0);
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -574,15 +515,52 @@ function MessagesBadge({ small = false }: { small?: boolean }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     refresh();
     const handler = () => refresh();
     if (typeof window !== "undefined") window.addEventListener(READ_STATE_EVENT, handler);
     const id = setInterval(refresh, 25000);
+
+    // Lightweight realtime to prompt refresh on incoming messages for me
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const uid = data.user?.id;
+        if (!uid) return;
+        const { data: convs } = await supabase
+          .from("conversations")
+          .select("id,user_a,user_b")
+          .or(`user_a.eq.${uid},user_b.eq.${uid}`);
+        const convIds = new Set((convs ?? []).map((c: { id: string }) => c.id));
+        if (convIds.size === 0) return;
+
+        const channel = supabase
+          .channel("badge-unread")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "messages" },
+            (payload) => {
+              const row = payload.new as { conversation_id?: string; sender_id?: string };
+              if (!row?.conversation_id || !row?.sender_id) return;
+              if (!convIds.has(row.conversation_id)) return;
+              if (row.sender_id === uid) return;
+              // debounce a quick refresh
+              if (!cancelled) refresh();
+            }
+          )
+          .subscribe();
+
+        return () => {
+          try { supabase.removeChannel(channel); } catch { /* noop */ }
+        };
+      } catch { /* ignore */ }
+    })();
     return () => {
       if (typeof window !== "undefined") window.removeEventListener(READ_STATE_EVENT, handler);
       clearInterval(id);
+      cancelled = true;
     };
-  }, [refresh]);
+  }, [refresh, supabase]);
 
   if (!count) return null;
   return (

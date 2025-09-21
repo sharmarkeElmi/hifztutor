@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Conversation, Message, Profile, ConversationMember } from "@/lib/types/messages";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 
 // Produce a canonical ordered pair so (a,b) and (b,a) map to the same row
 export function canonicalPair(a: string, b: string): [string, string] {
@@ -8,46 +9,105 @@ export function canonicalPair(a: string, b: string): [string, string] {
 
 // Resolve or create a conversation id between viewer and peer.
 // Ensures a UNIQUE (user_a, user_b) works by using the ordered pair.
+// Overloaded helper – can be used with a client (browser) or server-side without providing one.
+export async function getOrCreateConversationId(a: string, b: string): Promise<string | null>;
 export async function getOrCreateConversationId(
   supabase: SupabaseClient,
-  myId: string,
-  peerId: string
+  a: string,
+  b: string
+): Promise<string | null>;
+export async function getOrCreateConversationId(
+  arg1: SupabaseClient | string,
+  arg2?: string,
+  arg3?: string
 ): Promise<string | null> {
-  const [a, b] = canonicalPair(myId, peerId);
+  const hasClient = typeof arg1 !== "string";
+  const supabase: SupabaseClient = hasClient
+    ? (arg1 as SupabaseClient)
+    : (typeof window !== "undefined"
+        ? (createSupabaseBrowserClient() as SupabaseClient)
+        : ((await getServerSupabase()) as unknown as SupabaseClient));
 
-  // Try upsert against ordered pair
-  const { data: upserted, error: upErr } = await supabase
+  const u1 = (hasClient ? (arg2 as string) : (arg1 as string))!;
+  const u2 = (hasClient ? (arg3 as string) : (arg2 as string))!;
+  const [user_a, user_b] = canonicalPair(u1, u2);
+
+  // Try INSERT first; if duplicate (or any failure), fall back to SELECT
+  const ins = await supabase
     .from("conversations")
-    .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b" })
+    .insert({ user_a, user_b })
     .select("id")
     .single();
+  if (ins.data?.id) return ins.data.id;
 
-  if (upErr) {
-    // Fallback: fetch existing with either ordering (handles legacy rows)
-    const { data: existing } = await supabase
-      .from("conversations")
-      .select("id")
-      .or(`and(user_a.eq.${a},user_b.eq.${b}),and(user_a.eq.${b},user_b.eq.${a})`)
-      .maybeSingle();
-    return existing?.id ?? null;
-  }
+  // Find existing in canonical order
+  const sel1 = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("user_a", user_a)
+    .eq("user_b", user_b)
+    .maybeSingle();
+  if (sel1.data?.id) return sel1.data.id;
 
-  return upserted?.id ?? null;
+  // Then try reversed order to support any legacy rows
+  const sel2 = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("user_a", user_b)
+    .eq("user_b", user_a)
+    .maybeSingle();
+  if (sel2.data?.id) return sel2.data.id;
+
+  return null;
 }
 
 // Best-effort membership ensure; ignores unique violations
+export async function ensureMembership(conversationId: string, userId: string): Promise<void>;
 export async function ensureMembership(
   supabase: SupabaseClient,
   conversationId: string,
   userId: string
+): Promise<void>;
+export async function ensureMembership(
+  arg1: SupabaseClient | string,
+  arg2?: string,
+  arg3?: string
 ): Promise<void> {
-  const { error } = await supabase
+  const hasClient = typeof arg1 !== "string";
+  const supabase: SupabaseClient = hasClient
+    ? (arg1 as SupabaseClient)
+    : (typeof window !== "undefined"
+        ? (createSupabaseBrowserClient() as SupabaseClient)
+        : ((await getServerSupabase()) as unknown as SupabaseClient));
+  const conversationId = (hasClient ? (arg2 as string) : (arg1 as string))!;
+  const userId = (hasClient ? (arg3 as string) : (arg2 as string))!;
+
+  // Try INSERT first; ignore duplicates by falling back to SELECT
+  const ins = await supabase
     .from("conversation_members")
-    .insert({ conversation_id: conversationId, user_id: userId });
-  if (error && error.code !== "23505") {
-    // Log but do not throw to avoid derailing UX
-    console.warn("ensureMembership failed", error);
-  }
+    .insert({ conversation_id: conversationId, user_id: userId })
+    .select("conversation_id")
+    .single();
+  if (ins.data?.conversation_id) return;
+  await supabase
+    .from("conversation_members")
+    .select("conversation_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+}
+
+// Ensure membership rows exist for both participants (idempotent)
+export async function ensureBothMemberships(
+  supabase: SupabaseClient,
+  conversationId: string,
+  userA: string,
+  userB: string
+): Promise<void> {
+  await Promise.all([
+    ensureMembership(supabase, conversationId, userA),
+    ensureMembership(supabase, conversationId, userB),
+  ]);
 }
 
 // Derive the peer id given a conversation row and the viewer id
@@ -194,42 +254,101 @@ export type UnreadCounts = {
   perConversation: Record<string, number>;
 };
 
+export type UnreadCountsDebug = UnreadCounts & {
+  memberships: Array<{ conversation_id: string; last_read_at: string | null }>;
+  rawCounts: Record<string, number>;
+};
+
 // Computes per-conversation unread counts for the current user.
 export async function getUnreadCountsForUser(): Promise<UnreadCounts> {
   try {
     const supabase = await getServerSupabase();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: u } = await supabase.auth.getUser();
+    const user = u?.user;
     if (!user) return { totalUnread: 0, perConversation: {} };
 
-    // Load memberships for this user to get last_read_at and conversation ids
-    const { data: memberships, error: memErr } = await supabase
+    // Gather all conversations where the user participates
+    const { data: convs } = await supabase
+      .from("conversations")
+      .select("id,user_a,user_b")
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+    const convIds = (convs ?? []).map((c) => c.id as string);
+    if (convIds.length === 0) return { totalUnread: 0, perConversation: {} };
+
+    // Load memberships only for those convs
+    const { data: memberships } = await supabase
       .from("conversation_members")
       .select("conversation_id,last_read_at")
-      .eq("user_id", user.id);
-    if (memErr) return { totalUnread: 0, perConversation: {} };
+      .eq("user_id", user.id)
+      .in("conversation_id", convIds);
+
+    // Build effective last_read_at per conv (fallback to epoch for missing membership)
+    const lastReadByConv = new Map<string, string | null>();
+    (memberships ?? []).forEach((m) => lastReadByConv.set(m.conversation_id as string, m.last_read_at as string | null));
 
     const per: Record<string, number> = {};
-    // For each membership, count messages newer than last_read_at from other senders
-    if (memberships && memberships.length) {
-      const tasks = memberships.map(async (m) => {
-        const lastRead = m.last_read_at ?? "1970-01-01T00:00:00Z";
-        const { count } = await supabase
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("conversation_id", m.conversation_id)
-          .neq("sender_id", user.id)
-          .gt("created_at", lastRead);
-        per[m.conversation_id] = Number(count ?? 0);
-      });
-      await Promise.all(tasks);
-    }
+    const tasks = convIds.map(async (cid) => {
+      const lastRead = lastReadByConv.get(cid) ?? "1970-01-01T00:00:00Z";
+      const { count } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("conversation_id", cid)
+        .neq("sender_id", user.id)
+        .gt("created_at", lastRead);
+      per[cid] = Number(count ?? 0);
+    });
+    await Promise.all(tasks);
 
     const totalUnread = Object.values(per).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
     return { totalUnread, perConversation: per };
   } catch {
     return { totalUnread: 0, perConversation: {} };
+  }
+}
+
+// Debug variant that returns inputs used for counting
+export async function getUnreadCountsForUserDebug(): Promise<UnreadCountsDebug> {
+  try {
+    const supabase = await getServerSupabase();
+    const { data: u } = await supabase.auth.getUser();
+    const user = u?.user;
+    if (!user) return { totalUnread: 0, perConversation: {}, memberships: [], rawCounts: {} };
+
+    const { data: convs } = await supabase
+      .from("conversations")
+      .select("id,user_a,user_b")
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+    const convIds = (convs ?? []).map((c) => c.id as string);
+
+    const { data: membershipsRows } = await supabase
+      .from("conversation_members")
+      .select("conversation_id,last_read_at")
+      .eq("user_id", user.id)
+      .in("conversation_id", convIds.length ? convIds : ["00000000-0000-0000-0000-000000000000"]);
+
+    const lastReadByConv = new Map<string, string | null>();
+    (membershipsRows ?? []).forEach((m) => lastReadByConv.set(m.conversation_id as string, m.last_read_at as string | null));
+
+    const rawCounts: Record<string, number> = {};
+    await Promise.all(
+      convIds.map(async (cid) => {
+        const lastRead = lastReadByConv.get(cid) ?? "1970-01-01T00:00:00Z";
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", cid)
+          .neq("sender_id", user.id)
+          .gt("created_at", lastRead);
+        rawCounts[cid] = Number(count ?? 0);
+      })
+    );
+
+    const totalUnread = Object.values(rawCounts).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    const perConversation = rawCounts;
+    const effectiveMemberships = convIds.map((cid) => ({ conversation_id: cid, last_read_at: lastReadByConv.get(cid) ?? null }));
+    return { totalUnread, perConversation, memberships: effectiveMemberships, rawCounts };
+  } catch {
+    return { totalUnread: 0, perConversation: {}, memberships: [], rawCounts: {} };
   }
 }
 

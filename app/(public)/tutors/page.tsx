@@ -296,7 +296,7 @@ function TutorCard({ t }: { t: TutorCardData }) {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Link
-                href={`/messages/${t.id}`}
+                href={`/messages/${t.id}?filter=all`}
                 className="inline-flex items-center justify-center rounded-md border border-[#CDD5E0] px-3 py-2 text-sm font-semibold text-[#111629] hover:bg-[#F7D250] hover:text-[#111629]"
               >
                 Message

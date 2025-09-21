@@ -110,9 +110,19 @@ export default function MessagesLayoutClient({
     };
   }, [supabase]);
 
-  const filtered = conversations.map((c) => {
+  const baseList = conversations.map((c) => {
     const pid = c.user_a === me?.id ? c.user_b : c.user_a;
     return { id: c.id, peerId: pid, createdAt: new Date(c.created_at) };
+  });
+  const list = baseList.filter((row) => {
+    if (filter === "unread") {
+      return (unreadMap[row.id] ?? 0) > 0;
+    }
+    if (filter === "archived") {
+      // TODO: implement when archived flag/relationship exists
+      return false;
+    }
+    return true; // 'all'
   });
 
   const isThread = Boolean(params?.peerId);
@@ -121,7 +131,7 @@ export default function MessagesLayoutClient({
 
   return (
     <Shell role={role}>
-      <MessagesShell activeKey={filter} hideDesktopTabs hideMobileTabs={hideMobileTabs} initialUnreadCounts={initialUnreadCounts ?? undefined}>
+      <MessagesShell activeKey={filter} hideMobileTabs={hideMobileTabs} initialUnreadCounts={initialUnreadCounts ?? undefined}>
         <div className={`w-full overflow-hidden overscroll-none grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] md:divide-x md:divide-slate-200 ${mobileHeightClass} md:h-[calc(100vh-7rem-1px)]`}>
           {/* Left: Inbox */}
           <aside
@@ -130,28 +140,18 @@ export default function MessagesLayoutClient({
               "md:flex md:flex-col bg-white h-full overflow-y-auto pb-[env(safe-area-inset-bottom)] md:pb-0",
             ].join(" ")}
           >
-            {/* Desktop-only tabs above inbox */}
-            <div className="sticky top-0 z-10 bg-white border-b hidden md:block">
-              <div className="h-12 flex items-center gap-2 px-3">
-                <Link href={`/messages`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'all' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
-                  All
-                  {filter === 'all' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
-                </Link>
-                <Link href={`/messages?filter=unread`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'unread' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
-                  Unread
-                  {filter === 'unread' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
-                </Link>
-                <Link href={`/messages?filter=archived`} className={`relative px-4 py-3 text-[15px] font-medium transition ${filter === 'archived' ? 'text-[#111629] font-semibold' : 'text-slate-700 hover:text-[#111629]'}`}>
-                  Archived
-                  {filter === 'archived' && (<span className="pointer-events-none absolute bottom-0 left-2 right-2 h-[3px] rounded-full" style={{ backgroundColor: '#D3F501' }} />)}
-                </Link>
-              </div>
-            </div>
+            {/* Tabs removed here; MessagesShell renders the single source of truth */}
 
             {/* Inbox list scrolls inside left column */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain md:mb-0">
+              {filter === "unread" && list.length === 0 ? (
+                <div className="px-4 py-8 text-center text-slate-600">
+                  <p className="text-[15px] font-semibold text-[#111629]">You’ve read all your messages</p>
+                  <p className="mt-1 text-sm">We will notify you when you have new messages</p>
+                </div>
+              ) : null}
               <ul>
-                {filtered.map((row) => {
+                {list.map((row) => {
                   const meta = peerMeta[row.peerId];
                   const name = meta?.name ?? 'Loading…';
                   const avatar = meta?.avatar || null;
@@ -161,7 +161,7 @@ export default function MessagesLayoutClient({
                   return (
                     <li key={row.id}>
                       <Link
-                        href={`/messages/${row.peerId}${filter === 'all' ? '' : `?filter=${filter}`}`}
+                        href={`/messages/${row.peerId}?filter=${filter}`}
                         aria-current={isActive ? 'page' : undefined}
                         className={`group flex items-center gap-3 px-3 py-3 transition-colors ${isActive ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
                       >
@@ -216,4 +216,3 @@ export default function MessagesLayoutClient({
     </Shell>
   );
 }
-
