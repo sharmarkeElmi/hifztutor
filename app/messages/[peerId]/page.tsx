@@ -26,6 +26,7 @@ export default function ThreadPage() {
 
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [peerProfile, setPeerProfile] = useState<Profile | null>(null);
+  const [myProfile, setMyProfile] = useState<Profile | null>(null);
   const [conv, setConv] = useState<Conversation | null>(null);
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +121,18 @@ export default function ThreadPage() {
         setMe({ id: myId, email: myEmail });
 
         // Optional: role could be used for analytics or further logic; omitted from UI here
+
+        // Load my profile (name/avatar) for display in message cards
+        try {
+          const { data: meProf } = await supabase
+            .from("profiles")
+            .select("id, full_name, avatar_url")
+            .eq("id", myId)
+            .maybeSingle();
+          if (mounted) setMyProfile((meProf as Profile) ?? null);
+        } catch {
+          if (mounted) setMyProfile(null);
+        }
 
         if (!peerId || typeof peerId !== "string") {
           if (!mounted) return;
@@ -308,42 +321,70 @@ export default function ThreadPage() {
     <div className="flex h-full min-h-0 flex-col">
       {/* Sticky chat header */}
       <div className="sticky top-0 z-10 border-b bg-white">
-        <div className="h-16 flex items-center gap-3 px-4 sm:px-6">
-          {peerProfile?.avatar_url ? (
-            <Image src={peerProfile.avatar_url} alt={peerDisplayName} width={40} height={40} unoptimized className="h-8 w-8 sm:h-9 sm:w-9 rounded-md object-cover border" />
-          ) : (
-            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-md bg-slate-100 border grid place-items-center text-xs sm:text-sm font-semibold text-slate-700">
-              {String(peerDisplayName).slice(0, 2).toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-semibold text-[#111629] truncate">{peerDisplayName}</h1>
-            <p className="text-[11px] sm:text-xs text-slate-500 truncate">Private conversation</p>
-          </div>
+        <div className="h-16 flex items-center px-4 sm:px-6">
+          <h1 className="truncate text-[18px] sm:text-[20px] font-extrabold tracking-tight text-[#111629]">
+            {peerDisplayName}
+          </h1>
         </div>
       </div>
 
       {/* Messages list */}
-      <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 sm:px-6 sm:pt-6 pb-2">
+      <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 sm:px-6 sm:pt-6 pb-3">
         {msgs.map((m, idx) => {
           const mine = m.sender_id === (me?.id ?? "");
           const prev = msgs[idx - 1];
-          const changedSender = !prev || prev.sender_id !== m.sender_id;
-          const senderLabel = mine ? "You" : peerDisplayName;
+          const prevDay = prev ? new Date(prev.created_at).toDateString() : null;
+          const thisDay = new Date(m.created_at).toDateString();
+          const showDate = !prev || prevDay !== thisDay;
+          const timeLabel = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const dateLabel = new Date(m.created_at).toLocaleDateString([], { weekday: 'short', day: '2-digit', month: 'short' });
+
+          // Avatar and display name
+          const avatarUrl = mine ? null : (peerProfile?.avatar_url ?? null);
+          const displayName = mine
+            ? (myProfile?.full_name?.trim() || me?.email || 'You')
+            : (peerProfile?.full_name?.trim() || peerDisplayName);
+
           return (
-            <div key={m.id} className={`mb-3 ${mine ? "pl-16 pr-2" : "pr-16 pl-2"}`}>
-              {changedSender && (
-                <div className={`mb-1 text-xs ${mine ? "text-right" : "text-left"} text-slate-500`}>{senderLabel}</div>
+            <div key={m.id} className="mb-3 sm:mb-4">
+              {showDate && (
+                <div className="my-4 flex items-center justify-center">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-600">
+                    {dateLabel}
+                  </span>
+                </div>
               )}
-              <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[70%] sm:max-w-[66%] rounded-2xl border px-3 py-2 text-[15px] leading-relaxed shadow-sm ${
-                    mine ? "bg-[#F2FFB6] border-[#D3F501]" : "bg-white border-slate-200"
-                  }`}
-                >
-                  <div className="whitespace-pre-wrap break-words">{m.content}</div>
-                  <div className="mt-1 text-[10px] text-slate-400 text-right">
-                    {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+
+              <div className="flex">
+                {/* Message card with avatar + sender inside */}
+                <div className="flex-1">
+                  <div className="bg-white hover:bg-slate-100 transition-colors p-3 sm:p-4">
+                    <div className="grid grid-cols-[36px_1fr] gap-3 items-center">
+                      {/* Avatar */}
+                      <div className="h-9 w-9 rounded-md overflow-hidden border bg-slate-100 grid place-items-center shrink-0 self-center">
+                        {avatarUrl ? (
+                          <Image src={avatarUrl} alt={displayName} width={36} height={36} className="h-9 w-9 object-cover" />
+                        ) : (
+                          <span className="text-[12px] font-semibold text-slate-600">
+                            {String(displayName).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || '•'}
+                          </span>
+                        )}
+                      </div>
+                      {/* Name + time */}
+                      <div className="flex items-baseline gap-2 min-w-0">
+                        <span className="text-[14px] font-semibold text-[#111629] leading-none truncate">
+                          {displayName}
+                        </span>
+                        <span className="text-[12px] text-slate-500 leading-none">{timeLabel}</span>
+                      </div>
+                      {/* Content aligned under name */}
+                      <div className="col-start-2 text-[15px] leading-relaxed text-[#111629] whitespace-pre-wrap break-words">
+                        {m.content}
+                      </div>
+                      {mine && (
+                        <div className="col-start-2 mt-1 text-[12px] text-slate-400">Sent</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -354,8 +395,8 @@ export default function ThreadPage() {
       </div>
 
       {/* Composer */}
-      <div className="sticky bottom-0 z-10 border-t bg-white p-4 sm:p-6 pb-[env(safe-area-inset-bottom)] translate-y-[-12px]">
-        <div className="flex items-center gap-3 rounded-2xl border bg-white px-3 py-2 shadow-sm">
+      <div className="sticky bottom-0 z-10 bg-white p-4 sm:p-6 pb-[env(safe-area-inset-bottom)] mb-2 md:mb-0">
+        <div className="flex items-center gap-3 rounded-xl border-2 !border-black bg-white px-3 py-3 mt-2">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -365,12 +406,23 @@ export default function ThreadPage() {
                 handleSend();
               }
             }}
-            placeholder="Write a message…"
+            placeholder="Your message"
             rows={1}
-            className="h-11 max-h-40 flex-1 resize-none bg-transparent px-2 py-0 text-[15px] leading-normal outline-none placeholder:text-slate-400"
+            className="h-12 max-h-40 flex-1 resize-none bg-transparent px-2 py-0 text-[15px] leading-normal outline-none placeholder:text-slate-400"
           />
-          <Button onClick={handleSend} disabled={!canSend} aria-label="Send message" size="icon" variant="default" className="h-11 w-11 !bg-[#D3F501] !border-black hover:!bg-lime-400">
-            <Image src="/send-button-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
+          <Button
+            onClick={handleSend}
+            disabled={!canSend}
+            aria-label="Send message"
+            size="icon"
+            variant="secondary"
+            className={`h-12 w-12 disabled:opacity-60 focus-visible:ring-2 ${
+              canSend
+                ? '!bg-[#D3F501] !text-black hover:opacity-95 focus-visible:ring-[#D3F501]'
+                : 'bg-slate-200 text-slate-800 hover:bg-slate-300'
+            }`}
+          >
+            <Image src="/send-button-icon.svg" alt="" width={24} height={24} className="h-6 w-6" />
           </Button>
         </div>
       </div>

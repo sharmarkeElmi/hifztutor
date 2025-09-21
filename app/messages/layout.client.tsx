@@ -27,6 +27,7 @@ export default function MessagesLayoutClient({
   const [role, setRole] = useState<"student" | "tutor">("student");
   const [conversations, setConversations] = useState<{ id: string; user_a: string; user_b: string; created_at: string }[]>([]);
   const [peerMeta, setPeerMeta] = useState<Record<string, { name: string; avatar: string | null }>>({});
+  const [lastByConv, setLastByConv] = useState<Record<string, { content: string; created_at: string }>>({});
   const pathname = usePathname();
 
   // Local unread map for left list pills
@@ -79,6 +80,27 @@ export default function MessagesLayoutClient({
         .or(`user_a.eq.${myId},user_b.eq.${myId}`)
         .order("created_at", { ascending: false });
       if (mounted && convs) setConversations((convs as { id: string; user_a: string; user_b: string; created_at: string }[]) ?? []);
+
+      // Fetch latest message preview per conversation (simple per-conv query for MVP)
+      try {
+        const ids = ((convs as { id: string }[]) ?? []).map((c) => c.id);
+        const previews: Record<string, { content: string; created_at: string }> = {};
+        await Promise.all(
+          ids.map(async (cid) => {
+            const { data: m } = await supabase
+              .from("messages")
+              .select("content,created_at")
+              .eq("conversation_id", cid)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle<{ content: string; created_at: string }>();
+            if (m) previews[cid] = { content: m.content, created_at: m.created_at };
+          })
+        );
+        if (mounted) setLastByConv(previews);
+      } catch {
+        // ignore preview errors; UI remains functional
+      }
 
       const peerIds = Array.from(
         new Set(((convs as { user_a: string; user_b: string }[]) ?? []).map((c) => (c.user_a === myId ? c.user_b : c.user_a)))
@@ -193,7 +215,8 @@ export default function MessagesLayoutClient({
                   const meta = peerMeta[row.peerId];
                   const name = meta?.name ?? 'Loading…';
                   const avatar = meta?.avatar || null;
-                  const timeOrDay = row.createdAt?.toLocaleDateString() ?? '';
+                  const latestAt = lastByConv[row.id]?.created_at || row.createdAt?.toISOString() || '';
+                  const timeOrDay = latestAt ? new Date(latestAt).toLocaleDateString() : '';
                   const isActive = pathname === `/messages/${row.peerId}`;
                   const unread = unreadMap[row.id] ?? 0;
                   return (
@@ -201,38 +224,45 @@ export default function MessagesLayoutClient({
                       <Link
                         href={`/messages/${row.peerId}?filter=${filter}`}
                         aria-current={isActive ? 'page' : undefined}
-                        className={`group flex items-center gap-3 px-3 py-3 transition-colors ${isActive ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
+                        className={[
+                          'relative flex items-center justify-between px-4 py-3.5 transition-colors',
+                          isActive ? 'bg-slate-100' : 'hover:bg-slate-50'
+                        ].join(' ')}
                       >
-                        <div className="relative">
+                        {/* Left: avatar + name */}
+                        <div className="flex items-center gap-3 min-w-0">
                           {avatar ? (
-                            <Image src={avatar} alt={name} width={40} height={40} className="h-10 w-10 rounded-md object-cover border" />
+                            <Image src={avatar} alt={name} width={36} height={36} className="h-9 w-9 rounded-md object-cover border" />
                           ) : meta ? (
-                            <div className="h-10 w-10 grid place-items-center rounded-md bg-slate-100 border text-[12px] font-semibold text-slate-700">
+                            <div className="h-9 w-9 grid place-items-center rounded-md bg-slate-100 border text-[12px] font-semibold text-slate-700">
                               {name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase()}
                             </div>
                           ) : (
-                            <div className="h-10 w-10 rounded-md bg-slate-200 animate-pulse" aria-hidden="true" />
+                            <div className="h-9 w-9 rounded-md bg-slate-200 animate-pulse" aria-hidden="true" />
                           )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="truncate text-[15px] font-semibold text-[#111629]">
+                          <div className="min-w-0">
+                            <p className="truncate text-[15px] sm:text-[16px] font-semibold text-[#111629]">
                               {meta ? name : <span className="inline-block h-3 w-24 bg-slate-200 rounded animate-pulse align-middle" aria-hidden="true" />}
                             </p>
-                            <span className="shrink-0 text-[12px] text-slate-500">{timeOrDay}</span>
+                            <p className="mt-0.5 truncate text-[13px] text-slate-600">
+                              {lastByConv[row.id]?.content ?? ''}
+                            </p>
                           </div>
                         </div>
-                        {unread > 0 ? (
-                          <span
-                            aria-label={`${unread} unread`}
-                            className="ml-2 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-extrabold text-black ring-2 ring-white"
-                            style={{ backgroundColor: '#D3F501' }}
-                          >
-                            {unread > 99 ? '99+' : unread}
-                          </span>
-                        ) : null}
+                        {/* Right: time + unread dot */}
+                        <div className="ml-3 shrink-0 flex items-center gap-2">
+                          <span className="text-[12px] text-slate-500">{timeOrDay}</span>
+                          {unread > 0 ? (
+                            <span
+                              aria-label={`${unread} unread`}
+                              className="inline-block h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: '#D3F501' }}
+                            />
+                          ) : null}
+                        </div>
+                        {/* Removed active left accent; rely on row background + separators */}
                       </Link>
-                      <div className="h-px bg-slate-100 last:hidden" />
+                      <div className="border-b border-slate-300" />
                     </li>
                   );
                 })}
