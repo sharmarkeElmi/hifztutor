@@ -122,7 +122,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
         { key: "messages", label: "Messages", href: "/messages" },
         { key: "lessons", label: "My Lessons", href: "/student/lessons" },
         { key: "saved", label: "Saved", href: "/student/saved" },
-        { key: "find_tutors", label: "Find Tutors", href: "/tutors" },
+        { key: "find_tutors", label: "Find Tutors", href: "/student/find-tutors" },
         { key: "settings", label: "Settings", href: "/student/settings" },
         { key: "logout", label: "Log out", href: "#logout" },
       ];
@@ -143,7 +143,16 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
   const isActive = (item: SidebarItem) => {
     if (item.key === "logout") return false;
     if (activeKey) return item.key === activeKey;
-    return pathname ? (item.exact ? pathname === item.href : pathname.startsWith(item.href)) : false;
+    if (!pathname) return false;
+
+    // Special-case: keep "Find Tutors" active on profile pages inside the student dashboard
+    if (role === "student" && item.key === "find_tutors") {
+      if (pathname.startsWith("/student/find-tutors")) return true;
+      if (pathname.startsWith("/student/tutors/")) return true;
+      return false;
+    }
+
+    return item.exact ? pathname === item.href : pathname.startsWith(item.href);
   };
 
   const signOut = useCallback(async () => {
@@ -161,7 +170,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           {/* Row 1: Logo and user info (desktop), mobile menu button */}
-          <div className="h-14 flex items-center justify-between gap-4">
+          <div className="h-16 flex items-center justify-between gap-4">
             <Link
               href={role === "student" ? "/student/dashboard" : "/tutor/dashboard"}
               className="inline-flex items-center gap-2"
@@ -169,10 +178,10 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
               <Image
                 src="/logo.svg"
                 alt="HifzTutor"
-                width={120}
-                height={28}
+                width={160}
+                height={36}
                 priority
-                className="md:w-[140px] md:h-[32px] w-[120px] h-[28px]"
+                className="h-8 md:h-9 w-auto"
               />
             </Link>
             {/* Mobile quick actions: Messages + Notifications */}
@@ -317,36 +326,40 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
             </div>
           </div>
           </div>
+          {/* Full-width divider between top row and dashboard tabs */}
+          <div className="border-t border-slate-200 -mx-4 sm:-mx-6 lg:-mx-8" />
           {/* Row 2: Navigation (tabs on desktop, select on mobile) */}
-          <div className="h-12 hidden md:flex items-center justify-end border-t border-slate-100">
+          <div className="h-12 hidden md:flex items-center justify-start">
             {/* Desktop horizontal tabs */}
             <nav className="flex-1">
-              <ul className="flex items-center gap-3 md:gap-4">
-                {navItems.filter((i) => i.key !== "logout").map((item) => (
-                  <li key={item.key}>
-                    <Link
-                      href={item.href}
-                      className={[
-                        "relative inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[16px]",
-                        isActive(item)
-                          ? "text-[#111629] font-semibold"
-                          : "text-slate-700 hover:bg-slate-50 font-medium",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
-                      ].join(" ")}
-                      aria-current={isActive(item) ? "page" : undefined}
-                    >
-                      <span className="leading-none">{item.label}</span>
-                      {item.badge}
-                      {isActive(item) ? (
-                        <span
-                          className="pointer-events-none absolute left-0 right-0 bottom-[-6px] h-[3px] rounded-full"
-                          style={{ backgroundColor: "#D3F501" }}
-                          aria-hidden
-                        />
-                      ) : null}
-                    </Link>
-                  </li>
-                ))}
+              <ul className="flex items-center gap-2.5 md:gap-3.5">
+                {navItems.filter((i) => i.key !== "logout").map((item, idx) => {
+                  const pad = idx === 0 ? "pl-0 pr-3.5 py-2" : "px-3.5 py-2";
+                  return (
+                    <li key={item.key}>
+                      <Link
+                        href={item.href}
+                        className={[
+                          "relative inline-flex items-center gap-1.5 rounded-full " + pad + " text-[15px]",
+                          isActive(item)
+                            ? "text-[#111629] font-bold"
+                            : "text-slate-700 hover:bg-slate-50 font-semibold",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]",
+                        ].join(" ")}
+                        aria-current={isActive(item) ? "page" : undefined}
+                      >
+                        <span className="leading-none">{item.label}</span>
+                        {item.badge}
+                        {isActive(item) ? (
+                          <span
+                            className="pointer-events-none absolute left-0 right-0 bottom-[-10px] h-[4px] z-20 bg-[#D3F501]"
+                            aria-hidden
+                          />
+                        ) : null}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </nav>
             {/* Removed desktop dropdown icon button for consistency with mobile drawer */}
