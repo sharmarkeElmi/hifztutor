@@ -73,7 +73,7 @@ export default async function TutorDashboardPage() {
 
           {/* Edit tutor profile */}
           <Link
-            href="/tutor/profile"
+            href="/tutor/settings?tab=my-profile"
             className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#111629] shadow-sm"
             style={{ backgroundColor: '#F7D250' }}
           >
