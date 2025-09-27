@@ -24,6 +24,7 @@ import { READ_STATE_EVENT } from "@/lib/messages";
 // 🔧 Include full set for student & tutor menus
 type NavKey =
   | "overview"
+  | "profile"
   | "messages"
   | "lessons"
   | "saved"
@@ -58,6 +59,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
   const isMessages = pathname?.startsWith("/messages");
   const isSettings = pathname?.startsWith("/student/settings") || pathname?.startsWith("/tutor/settings");
   const [displayName, setDisplayName] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(false);
@@ -97,12 +99,15 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
           (user.user_metadata?.full_name as string | undefined) || "";
         const { data: prof } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, avatar_url")
           .eq("id", user.id)
           .maybeSingle();
         if (prof?.full_name) name = prof.full_name;
         if (!name) name = user.email ?? "";
-        if (!cancelled) setDisplayName(name);
+        if (!cancelled) {
+          setDisplayName(name);
+          setAvatarUrl(prof?.avatar_url ?? null);
+        }
       } catch {
         // ignore
       }
@@ -129,6 +134,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
     } else {
       return [
         { key: "overview", label: "Home", href: "/tutor/dashboard", exact: true },
+        { key: "profile", label: "My profile", href: "/tutor/profile", exact: true },
         { key: "messages", label: "Messages", href: "/messages" },
         { key: "lessons", label: "My Lessons", href: "/tutor/lessons" },
         { key: "classroom", label: "Classroom", href: "/tutor/classroom" },
@@ -240,12 +246,30 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                 onClick={() => setDesktopOpen((v) => !v)}
                 className="inline-flex items-center justify-center rounded-md p-1.5 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
-                <Image src="/desktop-dropdown-icon.svg" alt="" width={24} height={24} />
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt={displayName || "Account avatar"}
+                    className="h-8 w-8 rounded-md object-cover border"
+                  />
+                ) : (
+                  <Image src="/desktop-dropdown-icon.svg" alt="" width={28} height={28} className="h-8 w-8" />
+                )}
               </button>
               {desktopOpen && (
                 <div className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-xl z-50">
                   <div className="flex items-center gap-2 p-3 border-b">
-                    <Image src="/desktop-dropdown-icon.svg" alt="" width={20} height={20} />
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarUrl}
+                        alt={displayName || "Account avatar"}
+                        className="h-8 w-8 rounded-md object-cover border"
+                      />
+                    ) : (
+                      <Image src="/desktop-dropdown-icon.svg" alt="" width={28} height={28} className="h-8 w-8" />
+                    )}
                     <span className="text-sm font-semibold text-slate-800 truncate">
                       {displayName || "Your account"}
                     </span>
@@ -387,7 +411,16 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
           <div className="absolute right-0 top-0 h-full w-1/2 min-w-[280px] max-w-[360px] bg-white shadow-xl">
             <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-2">
-                <Image src="/desktop-dropdown-icon.svg" alt="" width={20} height={20} />
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt={displayName || "Account avatar"}
+                    className="h-8 w-8 rounded-md object-cover border"
+                  />
+                ) : (
+                  <Image src="/desktop-dropdown-icon.svg" alt="" width={28} height={28} className="h-8 w-8" />
+                )}
                 <span className="text-base font-semibold text-slate-800 truncate max-w-[200px]">
                   {displayName || "Your account"}
                 </span>

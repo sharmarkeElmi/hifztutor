@@ -232,11 +232,21 @@ export default function MessagesLayoutClient({
                         {/* Left: avatar + name */}
                         <div className="flex items-center gap-3 min-w-0">
                           {avatar ? (
-                            <Image src={avatar} alt={name} width={36} height={36} className="h-9 w-9 rounded-md object-cover border" />
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={avatar}
+                              alt={name}
+                              className="h-9 w-9 rounded-md object-cover border"
+                              loading="lazy"
+                            />
                           ) : meta ? (
-                            <div className="h-9 w-9 grid place-items-center rounded-md bg-slate-100 border text-[12px] font-semibold text-slate-700">
-                              {name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase()}
-                            </div>
+                            <Image
+                              src="/desktop-dropdown-icon.svg"
+                              alt="Default avatar"
+                              width={36}
+                              height={36}
+                              className="h-9 w-9 rounded-md border"
+                            />
                           ) : (
                             <div className="h-9 w-9 rounded-md bg-slate-200 animate-pulse" aria-hidden="true" />
                           )}

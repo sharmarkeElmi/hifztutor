@@ -340,7 +340,9 @@ export default function ThreadPage() {
           const dateLabel = new Date(m.created_at).toLocaleDateString([], { weekday: 'short', day: '2-digit', month: 'short' });
 
           // Avatar and display name
-          const avatarUrl = mine ? null : (peerProfile?.avatar_url ?? null);
+          const avatarUrl = mine
+            ? myProfile?.avatar_url ?? null
+            : peerProfile?.avatar_url ?? null;
           const displayName = mine
             ? (myProfile?.full_name?.trim() || me?.email || 'You')
             : (peerProfile?.full_name?.trim() || peerDisplayName);
@@ -363,11 +365,21 @@ export default function ThreadPage() {
                       {/* Avatar */}
                       <div className="h-9 w-9 rounded-md overflow-hidden border bg-slate-100 grid place-items-center shrink-0 self-center">
                         {avatarUrl ? (
-                          <Image src={avatarUrl} alt={displayName} width={36} height={36} className="h-9 w-9 object-cover" />
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={avatarUrl}
+                            alt={displayName || "User avatar"}
+                            className="h-9 w-9 object-cover"
+                            loading="lazy"
+                          />
                         ) : (
-                          <span className="text-[12px] font-semibold text-slate-600">
-                            {String(displayName).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || '•'}
-                          </span>
+                          <Image
+                            src="/desktop-dropdown-icon.svg"
+                            alt="Default avatar"
+                            width={36}
+                            height={36}
+                            className="h-9 w-9 object-cover"
+                          />
                         )}
                       </div>
                       {/* Name + time */}

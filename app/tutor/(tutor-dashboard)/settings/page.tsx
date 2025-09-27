@@ -11,11 +11,8 @@ import NotificationsForm, { type NotificationsValues } from "@features/settings/
 import useUpdatePassword from "@features/settings/hooks/useUpdatePassword";
 import useChangeEmail from "@features/settings/hooks/useChangeEmail";
 import useUpdateNotifications from "@features/settings/hooks/useUpdateNotifications";
-import TutorProfileForm from "@features/tutors/settings/TutorProfileForm";
-
 // --- Tabs config (tutor) ---
 const TABS: SettingsTab[] = [
-  { key: "my-profile", label: "My profile", href: "/tutor/settings?tab=my-profile" },
   { key: "email", label: "Email", href: "/tutor/settings?tab=email" },
   { key: "password", label: "Password", href: "/tutor/settings?tab=password" },
   { key: "notifications", label: "Notifications", href: "/tutor/settings?tab=notifications" },
@@ -160,7 +157,6 @@ export default function TutorSettingsPage() {
   }
 
   const titleByKey: Record<string, string> = {
-    "my-profile": "My profile",
     email: "Email",
     password: "Password",
     notifications: "Notifications",
@@ -196,8 +192,6 @@ export default function TutorSettingsPage() {
           {status.message}
         </div>
       ) : null}
-
-      {activeKey === "my-profile" && <TutorProfileForm />}
 
       {activeKey === "email" && (
         <EmailChangeForm onSubmit={submitEmail} isSubmitting={savingEmail} />

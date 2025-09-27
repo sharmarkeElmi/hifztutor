@@ -1,16 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@components/ui/button";
 
 export default function TutorProfileForm() {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const supabase = useMemo(
     () =>
@@ -44,6 +42,8 @@ export default function TutorProfileForm() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [timeZone, setTimeZone] = useState<string>("");
+  const [showTips, setShowTips] = useState(true);
+  const [showHelp, setShowHelp] = useState(true);
 
   // Countries for searchable select
   type Country = { iso2: string; name: string };
@@ -55,6 +55,7 @@ export default function TutorProfileForm() {
     async function load() {
       setLoading(true);
       setError(null);
+      setSuccessMessage(null);
 
       const {
         data: { user },
@@ -211,6 +212,55 @@ export default function TutorProfileForm() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
+
+    const trimmedFullName = fullName.trim();
+    const trimmedHeadline = headline.trim();
+    const trimmedBio = bio.trim();
+    const trimmedLanguages = languagesCSV.trim();
+    const trimmedRate = rate.trim();
+    const trimmedYears = years.trim();
+    const trimmedTimeZone = timeZone.trim();
+
+    if (fullName !== trimmedFullName) setFullName(trimmedFullName);
+    if (headline !== trimmedHeadline) setHeadline(trimmedHeadline);
+    if (bio !== trimmedBio) setBio(trimmedBio);
+    if (languagesCSV !== trimmedLanguages) setLanguagesCSV(trimmedLanguages);
+    if (rate !== trimmedRate) setRate(trimmedRate);
+    if (years !== trimmedYears) setYears(trimmedYears);
+    if (timeZone !== trimmedTimeZone) setTimeZone(trimmedTimeZone);
+
+    const languagesArr = trimmedLanguages
+      ? trimmedLanguages
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    const parsedRate = Number(trimmedRate);
+    const parsedYears = Number(trimmedYears);
+
+    const errors: string[] = [];
+    if (!trimmedFullName) errors.push("Full name is required.");
+    if (!trimmedHeadline) errors.push("Headline is required.");
+    if (!trimmedBio) errors.push("Short bio is required.");
+    if (!languagesArr.length) errors.push("Please list at least one language.");
+    if (!trimmedRate || Number.isNaN(parsedRate) || parsedRate <= 0)
+      errors.push("Provide a valid hourly rate greater than 0.");
+    if (!countryCode) errors.push("Please choose your country.");
+    if (!trimmedYears || Number.isNaN(parsedYears) || parsedYears < 0)
+      errors.push("Enter how many years of experience you have.");
+    if (!trimmedTimeZone) errors.push("Time zone is required.");
+    if (!subjects.length) errors.push("Add at least one subject.");
+    if (!specialties.length) errors.push("Add at least one specialty.");
+
+    if (errors.length) {
+      setError(errors.join(" "));
+      setSaving(false);
+      return;
+    }
+
+    const normalizedRate = Math.max(0, parsedRate);
+    const normalizedYears = Math.max(0, parsedYears);
 
     const {
       data: { user },
@@ -248,7 +298,7 @@ export default function TutorProfileForm() {
     const { error: pErr } = await supabase
       .from("profiles")
       .update({
-        full_name: fullName || null,
+        full_name: trimmedFullName,
         avatar_url: newAvatarUrl,
       })
       .eq("id", user.id);
@@ -259,29 +309,23 @@ export default function TutorProfileForm() {
       return;
     }
 
-    const hourly_rate_cents =
-      rate.trim() === "" ? null : Math.max(0, Math.round(Number(rate) * 100));
+    const hourly_rate_cents = Math.round(normalizedRate * 100);
 
-    const languagesArr = languagesCSV
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const yearsNum = years.trim() === "" ? null : Math.max(0, Math.round(Number(years)));
+    const yearsNum = Math.round(normalizedYears);
 
     const { error: tErr } = await supabase.from("tutor_profiles").upsert(
       {
         tutor_id: user.id,
-        headline: headline || null,
-        bio: bio || null,
-        languages: languagesArr.length ? languagesArr : null,
+        headline: trimmedHeadline,
+        bio: trimmedBio,
+        languages: languagesArr,
         hourly_rate_cents,
         country_code: countryCode || null,
         years_experience: yearsNum,
         photo_url: photoUrl || null,
-        subjects: subjects,
-        specialties: specialties,
-        time_zone: timeZone || null,
+        subjects,
+        specialties,
+        time_zone: trimmedTimeZone,
       },
       { onConflict: "tutor_id" }
     );
@@ -304,8 +348,18 @@ export default function TutorProfileForm() {
       // ignore cleanup errors
     }
 
+    setPreviousAvatarUrl(newAvatarUrl ?? previousAvatarUrl);
+    if (removeAvatar) {
+      setAvatarUrl("");
+      setPreviewUrl(null);
+      setRemoveAvatar(false);
+    } else if (!previewUrl && newAvatarUrl) {
+      setAvatarUrl(newAvatarUrl);
+    }
+
+    setError(null);
     setSaving(false);
-    router.back();
+    setSuccessMessage("Profile updated successfully.");
   }
 
   if (loading) {
@@ -316,223 +370,447 @@ export default function TutorProfileForm() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-2">
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSave} className="mt-2 space-y-6">
-      {/* Profile image */}
-      <section className="rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-medium text-muted-foreground">Profile image</h2>
-        <div className="mt-4 grid gap-6 md:grid-cols-[256px_1fr] md:items-start">
-          <div className="flex flex-col items-start gap-3">
-            <div className="h-64 w-64 overflow-hidden rounded-md border bg-white shadow-sm">
-              {previewUrl || avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewUrl || avatarUrl}
-                  alt={`${fullName || "Tutor"} avatar`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="grid h-full w-full place-items-center text-base font-semibold text-muted-foreground">
-                  {(fullName || "?").slice(0, 2).toUpperCase()}
+    <form onSubmit={handleSave} className="mt-4 space-y-6 pb-28 sm:space-y-4 lg:pb-0">
+      {error ? (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+      ) : null}
+      {successMessage ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{successMessage}</div>
+      ) : null}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,340px)]">
+        <div className="space-y-6">
+          <section className="bg-white p-4 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm">
+            <div>
+              <div className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]">
+                <span>Profile image</span>
+              </div>
+              <p className="mt-2 pl-3 text-sm text-slate-600 leading-snug">
+                Upload a bright, front-facing photo so students recognise you before lessons begin.
+              </p>
+            </div>
+            <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr] lg:items-start">
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-64 w-64 overflow-hidden rounded-xl border-2 border-black bg-slate-50 shadow-sm">
+                  {previewUrl || avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={previewUrl || avatarUrl}
+                      alt={`${fullName || "Tutor"} avatar`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-full w-full place-items-center text-xl font-semibold text-slate-400">
+                      {(fullName || "?").slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowCrop(true)}
-              className="text-sm font-medium text-[#111629] underline underline-offset-4 decoration-[#D3F501] disabled:opacity-40"
-              disabled={!(previewUrl || avatarUrl)}
-              aria-label="Edit photo"
-            >
-              Edit
-            </button>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCrop(true)}
+                  className="rounded px-3 py-1.5 text-sm font-medium text-[#111629] underline underline-offset-4 decoration-[#D3F501] transition-colors disabled:opacity-40 hover:bg-[#F1F2F4]"
+                  disabled={!(previewUrl || avatarUrl)}
+                  aria-label="Edit photo"
+                >
+                  Adjust crop
+                </button>
+              </div>
 
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              className="hidden"
-              onChange={onFileChange}
-            />
-            <button
-              type="button"
-              onClick={onPickFile}
-              className="inline-flex items-center gap-2 rounded-xl border-2 border-[#111629] px-4 py-3 text-base font-semibold text-[#111629] hover:bg-slate-50 focus:outline-none"
-              aria-label="Upload photo"
-            >
-              {/* icon from /public */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/upload-photo-icon.svg" alt="" className="h-5 w-5" />
-              Upload photo
-            </button>
-            <div className="mt-3 text-sm text-slate-400">
-              <div>Maximum size – 2MB</div>
-              <div>JPG or PNG format</div>
-            </div>
-            {avatarError ? (
-              <div className="mt-2 text-sm text-red-600">{avatarError}</div>
-            ) : null}
-          </div>
-        </div>
-      </section>
+              <div className="space-y-4">
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    className="hidden"
+                    onChange={onFileChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={onPickFile}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-[#111629] px-4 py-3 text-center text-base font-semibold text-[#111629] hover:bg-slate-50 focus:outline-none sm:w-auto sm:min-w-[320px]"
+                    aria-label="Upload photo"
+                  >
+                    {/* icon from /public */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/upload-photo-icon.svg" alt="" className="h-6 w-6" />
+                    Upload new photo
+                  </button>
+                  <div className="mt-3 text-center text-sm text-slate-400">
+                    <div>Maximum size – 2MB</div>
+                    <div>JPG or PNG format</div>
+                  </div>
+                </div>
 
-      {/* General (profiles) */}
-      <section className="rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-medium text-muted-foreground">General</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium">Full name</label>
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="mt-1 h-10 w-full rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-              placeholder="e.g. Ustadh Ahmed"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Tutor-specific */}
-      <section className="rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-medium text-muted-foreground">Tutor details</h2>
-
-        <div className="mt-4 grid gap-4">
-          <div>
-            <label className="block text-sm font-medium">Headline</label>
-            <input
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-              className="mt-1 h-10 w-full rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-              placeholder="Qur’an teacher • 3+ years experience"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Short bio</label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows={5}
-              className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-[#D3F501]"
-              placeholder="Tell students about your approach and experience…"
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium">Languages (CSV)</label>
-              <input
-                value={languagesCSV}
-                onChange={(e) => setLanguagesCSV(e.target.value)}
-                className="mt-1 h-10 w-full rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-                placeholder="Arabic (native), English (fluent)"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Hourly rate</label>
-              <div className="relative">
-                <input
-                  value={rate}
-                  onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ""))}
-                  className="mt-1 h-10 w-full rounded-md border px-3 pr-10 outline-none focus:ring-2 focus:ring-[#D3F501]"
-                  placeholder="20"
-                  inputMode="numeric"
-                />
-                <span className="absolute right-2 top-[10px] text-sm text-muted-foreground">/hr</span>
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-4 text-sm text-slate-600">
+                  <p className="font-semibold text-[#111629]">Photo guidelines</p>
+                  <ul className="mt-2 space-y-1">
+                    <li>• Face the camera with good lighting.</li>
+                    <li>• Choose a simple, distraction-free background.</li>
+                    <li>• Smile to appear warm and approachable.</li>
+                  </ul>
+                </div>
+                {avatarError ? <div className="text-sm font-medium text-red-600">{avatarError}</div> : null}
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium">Country</label>
-              <CountrySelect
-                options={countries}
-                value={countryCode}
-                onChange={setCountryCode}
-                placeholder="Select country"
-              />
-            </div>
-          </div>
+          </section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <section className="bg-white p-4 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm">
             <div>
-              <label className="block text-sm font-medium">Years experience</label>
+              <div className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]">
+                <span>Full name</span>
+                <span className="text-red-500">*</span>
+              </div>
+              <p className="mt-2 pl-3 text-sm text-slate-600 leading-snug">Use your real name so students know who they are booking.</p>
               <input
-                value={years}
-                onChange={(e) => setYears(e.target.value.replace(/[^0-9]/g, ""))}
-                className="mt-1 h-10 w-full rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-                placeholder="3"
-                inputMode="numeric"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="mt-2 h-11 w-full rounded-md border border-slate-200 px-3 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                required
+                aria-required="true"
+                placeholder="e.g. Ustadh Ahmed"
               />
             </div>
+          </section>
+
+          <section className="bg-white p-4 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm">
             <div>
-              <label className="block text-sm font-medium">Photo URL (optional)</label>
-              <input
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                className="mt-1 h-10 w-full rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-                placeholder="https://…"
-              />
+              <h2 className="mt-1 text-xl font-semibold text-[#111629]">Showcase your expertise</h2>
+              <p className="mt-2 text-sm text-slate-500">Give prospective students a clear idea of your experience and how you teach.</p>
             </div>
-          </div>
 
-          {/* Subjects taught */}
-          <div>
-            <label className="block text-sm font-medium">Subjects taught</label>
-            <ChipsInput
-              value={subjects}
-              onChange={setSubjects}
-              suggestions={["Qur'an Recitation","Tajweed","Hifz","Arabic Language","Beginner Qur'an","Ijazah Prep"]}
-              placeholder="Type and press Enter to add…"
-              maxItems={6}
-            />
-          </div>
+            <div className="mt-6 space-y-8">
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Overview</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="tutor-headline"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>Headline</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Summarise your teaching style or speciality in one sentence.</p>
+                    <textarea
+                      id="tutor-headline"
+                      value={headline}
+                      onChange={(e) => setHeadline(e.target.value)}
+                      rows={2}
+                      className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                      required
+                      aria-required="true"
+                      placeholder="Qur’an teacher • 3+ years experience"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="short-bio"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>About Me</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Highlight your methodology, experience and what students can expect.</p>
+                    <textarea
+                      id="short-bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      rows={5}
+                      className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                      required
+                      aria-required="true"
+                      placeholder="Tell students about your approach and experience…"
+                    />
+                  </div>
+                </div>
+              </div>
 
-          {/* Specialties */}
-          <div>
-            <label className="block text-sm font-medium">Specialties</label>
-            <ChipsInput
-              value={specialties}
-              onChange={setSpecialties}
-              suggestions={["Pronunciation (Makharij)","Memorization Techniques","Working with Kids","Rules Application","Rhythm & Flow","Beginners Support","Exam / Ijazah Prep"]}
-              placeholder="Type and press Enter to add…"
-              maxItems={6}
-            />
-          </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Availability & location</h3>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="languages-csv"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>Languages (CSV)</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">List the languages you speak.</p>
+                    <input
+                      id="languages-csv"
+                      value={languagesCSV}
+                      onChange={(e) => setLanguagesCSV(e.target.value)}
+                      className="mt-2 h-11 w-full rounded-md border border-slate-200 px-3 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                      required
+                      aria-required="true"
+                      placeholder="Arabic (native), English (fluent)"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="hourly-rate"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>Hourly rate</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Set the amount students pay per lesson.</p>
+                    <div className="relative mt-2">
+                      <input
+                        id="hourly-rate"
+                        value={rate}
+                        onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ""))}
+                        className="h-11 w-full rounded-md border border-slate-200 px-3 pr-10 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                        required
+                        aria-required="true"
+                        min="0"
+                        placeholder="20"
+                        inputMode="numeric"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">/hr</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="country-select"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>Country</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Helps us promote you to students nearby.</p>
+                    <div className="mt-2">
+                      <CountrySelect
+                        options={countries}
+                        value={countryCode}
+                        onChange={setCountryCode}
+                        inputId="country-select"
+                        placeholder="Select country"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="years-experience"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>Years experience</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Share how long you have been teaching.</p>
+                    <input
+                      id="years-experience"
+                      value={years}
+                      onChange={(e) => setYears(e.target.value.replace(/[^0-9]/g, ""))}
+                      className="mt-2 h-11 w-full rounded-md border border-slate-200 px-3 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                      required
+                      aria-required="true"
+                      min="0"
+                      placeholder="3"
+                      inputMode="numeric"
+                    />
+                  </div>
+                </div>
 
-          {/* Time zone */}
-          <div>
-            <label className="block text-sm font-medium">Time zone (IANA)</label>
-            <input
-              list="common-timezones"
-              value={timeZone}
-              onChange={(e) => setTimeZone(e.target.value)}
-              className="mt-1 h-10 w-full rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-              placeholder="e.g. Europe/London"
-            />
-            <datalist id="common-timezones">
-              <option value="Europe/London" />
-              <option value="America/New_York" />
-              <option value="Asia/Riyadh" />
-              <option value="Asia/Dubai" />
-              <option value="Europe/Istanbul" />
-            </datalist>
-          </div>
+                <div>
+                  <label
+                    htmlFor="intro-media"
+                    className="flex w-full items-center rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                  >
+                    Intro video / photo URL
+                  </label>
+                  <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Optional link to a hosted welcome video or image gallery.</p>
+                  <input
+                    id="intro-media"
+                    value={photoUrl}
+                    onChange={(e) => setPhotoUrl(e.target.value)}
+                    className="mt-2 h-11 w-full rounded-md border border-slate-200 px-3 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                    placeholder="https://…"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="time-zone"
+                    className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                  >
+                    <span>Time zone (IANA)</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Your availability will be converted for students automatically.</p>
+                  <input
+                    id="time-zone"
+                    list="common-timezones"
+                    value={timeZone}
+                    onChange={(e) => setTimeZone(e.target.value)}
+                    className="mt-2 h-11 w-full rounded-md border border-slate-200 px-3 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+                    required
+                    aria-required="true"
+                    placeholder="e.g. Europe/London"
+                  />
+                  <datalist id="common-timezones">
+                    <option value="Europe/London" />
+                    <option value="America/New_York" />
+                    <option value="Asia/Riyadh" />
+                    <option value="Asia/Dubai" />
+                    <option value="Europe/Istanbul" />
+                  </datalist>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Subjects & specialties</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="subjects-taught"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>Subjects taught</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Add up to six core subjects you teach most often.</p>
+                    <ChipsInput
+                      inputId="subjects-taught"
+                      value={subjects}
+                      onChange={setSubjects}
+                      suggestions={[
+                        "Qur'an Recitation",
+                        "Tajweed",
+                        "Hifz",
+                        "Arabic Language",
+                        "Beginner Qur'an",
+                        "Ijazah Prep",
+                      ]}
+                      placeholder="Type and press Enter to add…"
+                      maxItems={6}
+                      ariaLabel="Subjects taught"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="tutor-specialties"
+                      className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
+                    >
+                      <span>Specialties</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Highlight unique approaches or groups you support.</p>
+                    <ChipsInput
+                      inputId="tutor-specialties"
+                      value={specialties}
+                      onChange={setSpecialties}
+                      suggestions={[
+                        "Pronunciation (Makharij)",
+                        "Memorization Techniques",
+                        "Working with Kids",
+                        "Rules Application",
+                        "Rhythm & Flow",
+                        "Beginners Support",
+                        "Exam / Ijazah Prep",
+                      ]}
+                      placeholder="Type and press Enter to add…"
+                      maxItems={6}
+                      ariaLabel="Specialties"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
 
-      <div className="flex items-center justify-end pt-2">
-        <Button type="submit" variant="default" disabled={saving || !!avatarError}>
-          {saving ? "Saving…" : "Save changes"}
-        </Button>
+        <aside className="relative hidden lg:block">
+          <div className="sticky top-32">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]">
+                    <span>Profile tips</span>
+                  </div>
+                  <ul className="mt-3 space-y-2 pl-4 text-sm text-slate-600">
+                    <li>• Write in the first person — “I help students...”</li>
+                    <li>• Mention results or testimonials from past learners.</li>
+                    <li>• Keep sentences short for easy scanning.</li>
+                  </ul>
+                </div>
+                <div className="border-t border-slate-200 pt-3">
+                  <div className="flex items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]">
+                    <span>Need help?</span>
+                  </div>
+                  <p className="mt-3 pl-4 text-sm text-slate-500">
+                    Email support@hifztutor.com if you need assistance updating your profile or verifying your account.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 rounded-xl bg-[#F7FBE8] p-4 text-sm text-[#111629]">
+                <h3 className="text-sm font-semibold">Ready to publish?</h3>
+                <p className="mt-2 text-sm text-slate-700">
+                  Review your updates, then save to share them with students.
+                </p>
+                <Button type="submit" className="mt-3 hidden w-full lg:block" disabled={saving || !!avatarError}>
+                  {saving ? "Saving…" : "Save changes"}
+                </Button>
+                {avatarError ? (
+                  <p className="mt-2 text-xs font-medium text-red-600">Fix photo issues before saving.</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 pb-3 pt-3 backdrop-blur lg:hidden sm:px-6">
+        <div className="space-y-3">
+          <div className="rounded-md border border-slate-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setShowTips((prev) => !prev)}
+              className="flex w-full items-center justify-between px-3 py-2 text-sm font-semibold text-[#111629]"
+              aria-expanded={showTips}
+            >
+              <span>Profile tips</span>
+              <span className={`text-base transition-transform ${showTips ? "rotate-180" : "rotate-0"}`}>
+                ▾
+              </span>
+            </button>
+            {showTips ? (
+              <ul className="border-t border-slate-200 px-3 py-2 pl-4 text-sm text-slate-600">
+                <li>• Write in the first person — “I help students...”</li>
+                <li>• Mention results or testimonials from past learners.</li>
+                <li>• Keep sentences short for easy scanning.</li>
+              </ul>
+            ) : null}
+          </div>
+          <div className="rounded-md border border-slate-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setShowHelp((prev) => !prev)}
+              className="flex w-full items-center justify-between px-3 py-2 text-sm font-semibold text-[#111629]"
+              aria-expanded={showHelp}
+            >
+              <span>Need help?</span>
+              <span className={`text-base transition-transform ${showHelp ? "rotate-180" : "rotate-0"}`}>
+                ▾
+              </span>
+            </button>
+            {showHelp ? (
+              <p className="border-t border-slate-200 px-3 py-2 pl-4 text-sm text-slate-600">
+                Email support@hifztutor.com if you need assistance updating your profile or verifying your account.
+              </p>
+            ) : null}
+          </div>
+          <Button type="submit" className="w-full" disabled={saving || !!avatarError}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+          {avatarError ? (
+            <p className="text-center text-xs font-medium text-red-600">Fix photo issues before saving.</p>
+          ) : null}
+        </div>
+        <div aria-hidden className="pointer-events-none" style={{ height: "env(safe-area-inset-bottom, 0px)", background: "rgba(255,255,255,0.95)" }} />
       </div>
       <PhotoCropModal
         file={selectedFile}
@@ -568,12 +846,16 @@ function ChipsInput({
   suggestions,
   placeholder,
   maxItems,
+  inputId,
+  ariaLabel,
 }: {
   value: string[];
   onChange: (items: string[]) => void;
   suggestions: string[];
   placeholder?: string;
   maxItems: number;
+  inputId?: string;
+  ariaLabel?: string;
 }) {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -641,11 +923,13 @@ function ChipsInput({
             </span>
           ))}
           <input
+            id={inputId}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            className="flex-1 min-w-[140px] border-none outline-none py-1 text-sm"
+            className="flex-1 min-w-[140px] border-none bg-transparent py-1 text-sm font-medium text-[#111629] placeholder:text-slate-400 outline-none"
             placeholder={placeholder}
+            aria-label={ariaLabel}
           />
         </div>
       </div>
@@ -675,11 +959,15 @@ function CountrySelect({
   value,
   onChange,
   placeholder,
+  required,
+  inputId,
 }: {
   options: { iso2: string; name: string }[];
   value: string | null;
   onChange: (iso2: string | null) => void;
   placeholder?: string;
+  required?: boolean;
+  inputId?: string;
 }) {
   // Pin a short list of common countries at the top for convenience
   const byIso2 = useMemo(() => {
@@ -696,6 +984,19 @@ function CountrySelect({
     [options]
   );
 
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClick(event: MouseEvent) {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
   function flagEmoji(code: string) {
     if (!code || code.length !== 2) return "";
     const base = 127397; // regional indicator symbol base
@@ -706,31 +1007,84 @@ function CountrySelect({
     return String.fromCodePoint(...chars);
   }
 
+  const normalizedOptions = useMemo(() => [...commonOptions, ...remainingOptions], [commonOptions, remainingOptions]);
+  const filteredOptions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return normalizedOptions;
+    return normalizedOptions.filter((opt) => opt.name.toLowerCase().includes(q) || opt.iso2.toLowerCase().includes(q));
+  }, [normalizedOptions, query]);
+
+  const selectedOption = value ? byIso2.get(value.toUpperCase()) ?? null : null;
+
   return (
-    <select
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value ? e.target.value : null)}
-      className="mt-1 h-10 w-full rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501] bg-white"
-      aria-label="Select country"
-    >
-      <option value="">{placeholder || "Select country"}</option>
-      {commonOptions.length > 0 ? (
-        <optgroup label="Common">
-          {commonOptions.map((c) => (
-            <option key={c.iso2} value={c.iso2}>
-              {`${flagEmoji(c.iso2)} ${c.name} (${c.iso2})`}
-            </option>
-          ))}
-        </optgroup>
+    <div ref={containerRef} className="relative">
+      <button
+        id={inputId}
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-11 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 text-[15px] font-medium text-[#111629] outline-none transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Select country"
+      >
+        <span className="flex items-center gap-2">
+          {selectedOption ? (
+            <>
+              <span>{flagEmoji(selectedOption.iso2)}</span>
+              <span>{selectedOption.name}</span>
+            </>
+          ) : (
+            <span className="text-slate-400">{placeholder || "Select country"}</span>
+          )}
+        </span>
+        <span className="text-slate-400">▾</span>
+      </button>
+      {required ? (
+        <input tabIndex={-1} className="sr-only" value={value ?? ""} required readOnly aria-hidden="true" />
       ) : null}
-      <optgroup label="All countries">
-        {remainingOptions.map((c) => (
-          <option key={c.iso2} value={c.iso2}>
-            {`${flagEmoji(c.iso2)} ${c.name} (${c.iso2})`}
-          </option>
-        ))}
-      </optgroup>
-    </select>
+      {open ? (
+        <div className="absolute z-30 mt-2 max-h-64 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+          <div className="border-b p-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+              placeholder="Search country..."
+              className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-[#D3F501] focus:ring-1 focus:ring-[#D3F501]"
+            />
+          </div>
+          <ul role="listbox" className="max-h-52 overflow-y-auto py-1">
+            {filteredOptions.length === 0 ? (
+              <li className="px-3 py-2 text-sm text-slate-500">No matches</li>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.iso2.toUpperCase() === (value ?? "").toUpperCase();
+                return (
+                  <li key={opt.iso2}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange(opt.iso2);
+                        setOpen(false);
+                        setQuery("");
+                      }}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                        isSelected ? "bg-slate-100 text-[#111629]" : "hover:bg-slate-50"
+                      }`}
+                      role="option"
+                      aria-selected={isSelected}
+                    >
+                      <span className="text-lg leading-none">{flagEmoji(opt.iso2)}</span>
+                      <span>{opt.name}</span>
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -759,8 +1113,7 @@ function PhotoCropModal({
   onDelete: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const sourceImageRef = useRef<HTMLImageElement | null>(null);
   const [crop, setCrop] = useState<{ x: number; y: number; size: number }>(() => {
     const defaultSize = CROP_CANVAS_SIZE * 0.75;
     const start = (CROP_CANVAS_SIZE - defaultSize) / 2;
@@ -817,52 +1170,55 @@ function PhotoCropModal({
   }, [handlePointerMove]);
 
   useEffect(() => {
-    if (open && file) {
-      const url = URL.createObjectURL(file);
-      setImgUrl(url);
-      const defaultSize = CROP_CANVAS_SIZE * 0.75;
-      const start = (CROP_CANVAS_SIZE - defaultSize) / 2;
-      setCrop({ x: start, y: start, size: defaultSize });
-      return () => {
-        URL.revokeObjectURL(url);
-      };
+    if (!open || !file) {
+      sourceImageRef.current = null;
+      drawInfoRef.current = null;
+      return;
     }
-    setImgUrl(null);
-  }, [file, open]);
 
-  useEffect(() => {
     const canvas = canvasRef.current;
-    const imgEl = imgRef.current;
-    if (!canvas || !imgEl || !imgUrl) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const size = CROP_CANVAS_SIZE;
-    canvas.width = size;
-    canvas.height = size;
+    if (!canvas || !canvas.getContext("2d")) return;
 
-    const draw = () => {
-      const { naturalWidth, naturalHeight } = imgEl;
-      if (!naturalWidth || !naturalHeight) return;
+    const defaultSize = CROP_CANVAS_SIZE * 0.75;
+    const start = (CROP_CANVAS_SIZE - defaultSize) / 2;
+    setCrop({ x: start, y: start, size: defaultSize });
+
+    const img = new Image();
+    sourceImageRef.current = img;
+    let objectUrl: string | null = null;
+
+    img.onload = () => {
+      const canvasEl = canvasRef.current;
+      if (!canvasEl) return;
+      const context = canvasEl.getContext("2d");
+      if (!context) return;
+      const size = CROP_CANVAS_SIZE;
+      canvasEl.width = size;
+      canvasEl.height = size;
+      const { naturalWidth, naturalHeight } = img;
       const scale = Math.max(size / naturalWidth, size / naturalHeight);
       const scaledWidth = naturalWidth * scale;
       const scaledHeight = naturalHeight * scale;
       const offsetX = (size - scaledWidth) / 2;
       const offsetY = (size - scaledHeight) / 2;
       drawInfoRef.current = { scale, offsetX, offsetY, naturalWidth, naturalHeight };
-      ctx.clearRect(0, 0, size, size);
-      ctx.drawImage(imgEl, offsetX, offsetY, scaledWidth, scaledHeight);
+      context.clearRect(0, 0, size, size);
+      context.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
     };
 
-    if (imgEl.complete) {
-      draw();
-      return;
-    }
+    img.onerror = () => {
+      drawInfoRef.current = null;
+    };
 
-    imgEl.addEventListener("load", draw);
+    objectUrl = URL.createObjectURL(file);
+    img.src = objectUrl;
+
     return () => {
-      imgEl.removeEventListener("load", draw);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      sourceImageRef.current = null;
+      drawInfoRef.current = null;
     };
-  }, [imgUrl]);
+  }, [file, open]);
 
   useEffect(() => {
     return () => {
@@ -877,6 +1233,7 @@ function PhotoCropModal({
   function startInteraction(e: React.PointerEvent, mode: "move" | "resize") {
     e.preventDefault();
     e.stopPropagation();
+    if (!sourceImageRef.current) return;
     interactionRef.current = {
       mode,
       originX: e.clientX,
@@ -889,7 +1246,7 @@ function PhotoCropModal({
 
   async function handleApply() {
     if (!file) return;
-    const imgEl = imgRef.current;
+    const imgEl = sourceImageRef.current;
     const info = drawInfoRef.current;
     if (!imgEl || !info) return;
     const { scale, offsetX, offsetY, naturalWidth, naturalHeight } = info;
@@ -917,14 +1274,15 @@ function PhotoCropModal({
     );
 
     const type = file.type === "image/png" ? "image/png" : "image/jpeg";
-    const blob: Blob = await new Promise((resolve) =>
-      exportCanvas.toBlob((b) => resolve(b as Blob), type, 0.92)
-    );
-    const cropped = new File(
-      [blob],
-      file.name.replace(/(\.[a-z0-9]+)$/i, "-cropped$1"),
-      { type }
-    );
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      exportCanvas.toBlob((b) => {
+        if (b) resolve(b);
+        else reject(new Error("Failed to crop image"));
+      }, type, 0.92);
+    });
+    const cropped = new File([
+      blob,
+    ], file.name.replace(/(\.[a-z0-9]+)$/i, "-cropped$1"), { type });
     onApply(cropped);
     onClose();
   }
@@ -979,15 +1337,6 @@ function PhotoCropModal({
             <p>Drag the square to adjust what shows in your profile thumbnail.</p>
             <p className="mt-2">Use the corner handle to resize the focus area until it feels right.</p>
           </div>
-          {imgUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              ref={imgRef}
-              src={imgUrl}
-              alt="to crop"
-              className="hidden"
-            />
-          ) : null}
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
           <button
@@ -1007,7 +1356,7 @@ function PhotoCropModal({
           >
             Cancel
           </button>
-          <Button type="button" onClick={handleApply}>
+          <Button type="button" onClick={handleApply} disabled={!sourceImageRef.current}>
             Save
           </Button>
         </div>
