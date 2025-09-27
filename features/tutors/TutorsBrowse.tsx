@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import TutorCard from "@features/tutors/components/TutorCard";
 import TutorCardSkeleton from "@features/tutors/components/TutorCard.Skeleton";
+import { useSavedTutors } from "@features/tutors/hooks/useSavedTutors";
 
 /** Row from the public.tutor_directory view */
 type DirectoryRow = {
@@ -14,6 +15,7 @@ type DirectoryRow = {
   hourly_rate_cents: number | null;
   years_experience: number | null;
   image: string | null;
+  country_code: string | null;
   bio: string | null;
 };
 
@@ -22,9 +24,10 @@ type TutorCardData = {
   name: string;
   headline: string | null;
   languages: string[];
-  years: number | null;
+  years_experience: number | null;
   rate_cents: number | null;
   image: string | null;
+  country_code: string | null;
 };
 
 type SortKey = "relevance" | "price_low" | "price_high" | "experience";
@@ -49,6 +52,8 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
     []
   );
 
+  const savedState = useSavedTutors();
+
   // UI state
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("relevance");
@@ -60,7 +65,7 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
       const { data, error } = await supabase
         .from("tutor_directory")
         .select(
-          "id, name, headline, languages, hourly_rate_cents, years_experience, image, bio"
+          "id, name, headline, languages, hourly_rate_cents, years_experience, image, country_code, bio"
         )
         .order("years_experience", { ascending: false, nullsFirst: false })
         .limit(200);
@@ -89,9 +94,10 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
       name: r.name ?? "Hifz Tutor",
       headline: r.headline ?? null,
       languages: r.languages ?? [],
-      years: r.years_experience ?? null,
+      years_experience: r.years_experience ?? null,
       rate_cents: r.hourly_rate_cents ?? null,
       image: r.image ?? null,
+      country_code: r.country_code ?? null,
     }));
   }, [rows]);
 
@@ -120,7 +126,7 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
         arr.sort((a, b) => (b.rate_cents ?? -1) - (a.rate_cents ?? -1));
         break;
       case "experience":
-        arr.sort((a, b) => (b.years ?? 0) - (a.years ?? 0));
+        arr.sort((a, b) => (b.years_experience ?? 0) - (a.years_experience ?? 0));
         break;
       default:
         // relevance = keep filtered order
@@ -179,6 +185,21 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
         </div>
       </div>
 
+      {savedState.error ? (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="alert">
+          <div className="flex items-start justify-between gap-4">
+            <span>We couldn&apos;t update your saved tutors right now. {savedState.error}</span>
+            <button
+              type="button"
+              onClick={savedState.clearError}
+              className="rounded-md border border-amber-300 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800 transition hover:bg-amber-100"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {/* States */}
       {loading && <SkeletonGrid />}
 
@@ -209,9 +230,17 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
                     avatar_url: t.image,
                     rate_cents: t.rate_cents,
                     languages: t.languages,
+                    headline: t.headline,
+                    years_experience: t.years_experience,
+                    country_code: t.country_code,
                   }}
                   href={href}
                   onMessageHref={onMessageHref}
+                  saveAction={{
+                    isSaved: savedState.isSaved(t.id),
+                    isBusy: savedState.isPending(t.id),
+                    onToggle: () => savedState.toggleSave(t.id),
+                  }}
                 />
               </li>
             );
