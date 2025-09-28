@@ -57,7 +57,7 @@ export default function TutorSignUpPage() {
         data: { full_name: values.full_name, role: "tutor" },
         emailRedirectTo:
           typeof window !== "undefined"
-            ? `${window.location.origin}/tutor/signin?checkEmail=1`
+            ? `${window.location.origin}/signin?checkEmail=1`
             : undefined,
       },
     });
@@ -89,7 +89,7 @@ export default function TutorSignUpPage() {
 
     // Most setups require email confirmation → send user to sign-in with hint
     setLoading(false);
-    router.push("/tutor/signin?checkEmail=1");
+    router.push("/signin?checkEmail=1");
   };
 
   return (
@@ -183,7 +183,7 @@ export default function TutorSignUpPage() {
         {/* Cross-links */}
         <div className="text-center text-sm font-sans">
           Already have a tutor account?{" "}
-          <Link href="/tutor/signin" className="text-blue-600 hover:underline">Sign in</Link>
+          <Link href="/signin" className="text-blue-600 hover:underline">Sign in</Link>
         </div>
 
         <div className="text-center text-xs text-muted-foreground font-sans">

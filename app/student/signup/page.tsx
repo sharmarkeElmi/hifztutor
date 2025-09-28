@@ -7,7 +7,7 @@
  *  - Register a new student with email/password.
  *  - Store role in Supabase Auth metadata (role: "student").
  *  - If we get a session immediately (confirmation off), create profile row + go to dashboard.
- *  - Otherwise, send the user to /student/signin with a "check your email" hint.
+ *  - Otherwise, send the user to /signin with a "check your email" hint.
  *
  * Notes:
  *  - We only upsert the profile when we actually have a session (i.e., a user id).
@@ -81,7 +81,7 @@ export default function StudentSignUpPage() {
         // After email confirmation, user lands on the student sign-in page
         emailRedirectTo:
           typeof window !== "undefined"
-            ? `${window.location.origin}/student/signin?checkEmail=1`
+            ? `${window.location.origin}/signin?checkEmail=1`
             : undefined,
       },
     });
@@ -114,7 +114,7 @@ export default function StudentSignUpPage() {
 
     // Most setups require email confirmation → send user to sign-in with hint
     setLoading(false);
-    router.push("/student/signin?checkEmail=1");
+    router.push("/signin?checkEmail=1");
   };
 
   // =====================
@@ -202,7 +202,7 @@ export default function StudentSignUpPage() {
         {/* Auth cross-links */}
         <div className="text-center text-sm">
           Already have an account?{" "}
-          <Link href="/student/signin" className="text-blue-600 hover:underline">
+          <Link href="/signin" className="text-blue-600 hover:underline">
             Sign in
           </Link>
         </div>

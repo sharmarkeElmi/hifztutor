@@ -11,15 +11,26 @@ import Header from "./Header";
  */
 export default function HeaderSwitcher({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/";
-const appPrefixes = ["/student", "/tutor", "/lesson", "/inbox", "/messages"];
-  const isAppArea = appPrefixes.some((p) => pathname.startsWith(p));
+  const appPrefixes = ["/student", "/tutor", "/lesson", "/inbox", "/messages"];
+  const authPages = ["/signin", "/student/signup", "/tutor/signup"]; // auth flows still use public header but custom layout
+  const isAppArea = appPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const isAuthPage = authPages.includes(pathname);
 
   if (isAppArea) {
     // Dashboard / live room: no public header, no container
     return <>{children}</>;
   }
 
-  // Public / marketing / auth pages
+  if (isAuthPage) {
+    return (
+      <>
+        <Header />
+        <main className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-white">{children}</main>
+      </>
+    );
+  }
+
+  // Public / marketing pages
   return (
     <>
       <Header />

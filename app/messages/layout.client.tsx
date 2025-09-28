@@ -65,11 +65,14 @@ export default function MessagesLayoutClient({
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data: s } = await supabase.auth.getSession();
-      const myId = s?.session?.user.id;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error("Failed to verify auth in messages layout:", userError.message);
+      }
+      const myId = userData?.user?.id;
       if (!myId) return;
       if (!mounted) return;
-      setMe({ id: myId, email: s?.session?.user.email ?? null });
+      setMe({ id: myId, email: userData?.user?.email ?? null });
 
       const { data: prof } = await supabase.from("profiles").select("role").eq("id", myId).maybeSingle();
       if (mounted) setRole(prof?.role === "tutor" ? "tutor" : "student");

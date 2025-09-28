@@ -325,7 +325,7 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
                   </button>
                 ) : (
                   <Link
-                    href={`/student/signin?next=${nextParam}`}
+                    href={`/signin?next=${nextParam}`}
                     className="inline-flex items-center justify-center rounded-md bg-[#F7D250] px-3 py-2 text-sm font-semibold text-[#111629] hover:bg-[#D3F501]"
                   >
                     Book trial

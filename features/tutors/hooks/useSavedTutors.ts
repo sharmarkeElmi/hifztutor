@@ -75,9 +75,19 @@ export function useSavedTutors() {
 
     resolveSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
       if (!active) return;
-      setUserId(session?.user?.id ?? null);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!active) return;
+        setUserId(user?.id ?? null);
+      } catch (err) {
+        if (!active) return;
+        setError(getErrorMessage(err));
+        setUserId(null);
+      }
     });
 
     return () => {
@@ -162,9 +172,9 @@ export function useSavedTutors() {
     if (userId) return true;
     if (typeof window !== "undefined") {
       const next = encodeURIComponent(window.location.pathname + window.location.search);
-      router.push(`/student/signin?next=${next}`);
+      router.push(`/signin?next=${next}`);
     } else {
-      router.push("/student/signin");
+      router.push("/signin");
     }
     return false;
   }, [router, userId]);

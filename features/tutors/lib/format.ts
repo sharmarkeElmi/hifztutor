@@ -28,3 +28,7 @@ export function formatLanguages(arr?: string[] | null): string {
   return arr.join(", ");
 }
 
+export function formatSubjects(arr?: string[] | null): string {
+  if (!arr || arr.length === 0) return "No subjects listed";
+  return arr.join(", ");
+}

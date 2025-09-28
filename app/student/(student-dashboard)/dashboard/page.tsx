@@ -45,7 +45,7 @@ export default async function StudentDashboardPage() {
   // Auth guard
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) {
-    redirect("/student/signin");
+    redirect(`/signin?next=${encodeURIComponent("/student/dashboard")}`);
   }
 
   // Profile + role guard

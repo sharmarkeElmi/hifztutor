@@ -7,7 +7,7 @@ import TutorCardSkeleton from "@features/tutors/components/TutorCard.Skeleton";
 import { useSavedTutors } from "@features/tutors/hooks/useSavedTutors";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 
-const DIRECTORY_FIELDS = "id, name, headline, languages, hourly_rate_cents, years_experience, image, country_code";
+const DIRECTORY_FIELDS = "id, name, headline, languages, hourly_rate_cents, years_experience, image, country_code, subjects";
 
 type DirectoryTutor = {
   id: string;
@@ -18,6 +18,7 @@ type DirectoryTutor = {
   years_experience: number | null;
   image: string | null;
   country_code: string | null;
+  subjects: string[] | null;
 };
 
 function getErrorMessage(err: unknown): string {
@@ -137,7 +138,7 @@ export default function SavedTutorsPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
           <p>You need an account to save tutors.</p>
           <Link
-            href="/student/signin"
+            href="/signin?next=%2Fstudent%2Fsaved"
             className="mt-3 inline-flex items-center justify-center rounded-md bg-[#F7D250] px-4 py-2 text-sm font-semibold text-[#111629] hover:bg-[#D3F501]"
           >
             Sign in to continue
@@ -178,6 +179,7 @@ export default function SavedTutorsPage() {
                     years_experience: tutor.years_experience,
                     avatar_url: tutor.image,
                     country_code: tutor.country_code,
+                    subjects: tutor.subjects ?? [],
                   }}
                   href={href}
                   onMessageHref={messageHref}

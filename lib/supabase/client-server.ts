@@ -4,7 +4,11 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-export async function createSupabaseServerClient() {
+type Options = {
+  readOnly?: boolean;
+};
+
+export async function createSupabaseServerClient({ readOnly }: Options = {}) {
   const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,14 +18,15 @@ export async function createSupabaseServerClient() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set({ name, value, ...options });
+        set(name: string, value: string, cookieOptions: CookieOptions) {
+          if (readOnly) return;
+          cookieStore.set({ name, value, ...cookieOptions });
         },
-        remove(name: string, options: CookieOptions) {
-          cookieStore.set({ name, value: "", ...options });
+        remove(name: string, cookieOptions: CookieOptions) {
+          if (readOnly) return;
+          cookieStore.set({ name, value: "", ...cookieOptions });
         },
       },
     }
   );
 }
-

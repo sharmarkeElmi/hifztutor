@@ -150,13 +150,17 @@ export default function TutorAvailabilityPage() {
     useEffect(() => {
         let active = true;
         (async () => {
-            const { data: sess } = await supabase.auth.getSession();
-            const session = sess?.session;
-            if (!session) {
-                window.location.replace("/tutor/signin");
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (userError) {
+                console.error("Failed to verify auth in tutor availability:", userError.message);
+            }
+            const user = userData?.user;
+            if (!user) {
+                const next = typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : undefined;
+                window.location.replace(next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
                 return;
             }
-            const uid = session.user.id;
+            const uid = user.id;
             setMyId(uid);
 
             // (Optional) ensure role is tutor, else bounce to student dash

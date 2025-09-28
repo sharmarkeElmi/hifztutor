@@ -16,6 +16,7 @@ type DirectoryRow = {
   years_experience: number | null;
   image: string | null;
   country_code: string | null;
+  subjects: string[] | null;
   bio: string | null;
 };
 
@@ -28,6 +29,7 @@ type TutorCardData = {
   rate_cents: number | null;
   image: string | null;
   country_code: string | null;
+  subjects: string[] | null;
 };
 
 type SortKey = "relevance" | "price_low" | "price_high" | "experience";
@@ -65,7 +67,7 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
       const { data, error } = await supabase
         .from("tutor_directory")
         .select(
-          "id, name, headline, languages, hourly_rate_cents, years_experience, image, country_code, bio"
+          "id, name, headline, languages, hourly_rate_cents, years_experience, image, country_code, subjects, bio"
         )
         .order("years_experience", { ascending: false, nullsFirst: false })
         .limit(200);
@@ -98,6 +100,7 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
       rate_cents: r.hourly_rate_cents ?? null,
       image: r.image ?? null,
       country_code: r.country_code ?? null,
+      subjects: r.subjects ?? null,
     }));
   }, [rows]);
 
@@ -233,6 +236,7 @@ export default function TutorsBrowse({ basePath = "/tutors" }: BrowseProps) {
                     headline: t.headline,
                     years_experience: t.years_experience,
                     country_code: t.country_code,
+                    subjects: t.subjects,
                   }}
                   href={href}
                   onMessageHref={onMessageHref}

@@ -35,7 +35,7 @@ export default async function TutorDashboardPage() {
   // Auth guard
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) {
-    redirect("/tutor/signin");
+    redirect(`/signin?next=${encodeURIComponent("/tutor/dashboard")}`);
   }
 
   // Profile + role guard (self-heal minimal: if role not tutor, redirect to student)

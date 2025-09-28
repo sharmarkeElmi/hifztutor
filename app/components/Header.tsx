@@ -7,83 +7,145 @@
  * Hidden on /student, /tutor, /lesson, /inbox via HeaderSwitcher.
  */
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-// NOTE: for SVGs we prefer a plain <img/> to render the vector exactly as-authored
-// (no layout calculations or rasterisation from next/image are needed here).
-
-const BRAND = {
-  deep: "#111629",    // deep green (brand)
-  yellow: "#F7D250",  // brand yellow (primary CTA)
-  accent: "#D3F501",  // accent teal/green (secondary button)
-};
+import { usePathname } from "next/navigation";
+import { buttonVariants } from "@components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Header() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  const navItems = [
+    { label: "Home", href: "/landing" },
+    { label: "Find a HifzTutor", href: "/tutors" },
+    { label: "Become a HifzTutor", href: "/become-a-tutor" },
+  ];
+
+  const isActive = (href: string) => {
+    if (href === "/landing") {
+      return pathname === "/" || pathname === "/landing";
+    }
+    return pathname.startsWith(href);
+  };
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   return (
-    <header className="border-b border-slate-200/60 relative z-50">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+    <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white">
+      <nav className="flex w-full items-center justify-between px-4 py-3 md:px-8">
         {/* Logo */}
         <Link href="/landing" aria-label="HifzTutor home" className="flex items-center gap-3">
-          {/* Full wordmark on md+ screens */}
           <Image
             src="/logo.svg"
             alt="HifzTutor"
-            width={156}
-            height={32}
+            width={148}
+            height={30}
             priority
             unoptimized
-            className="hidden md:block select-none"
-          />
-          {/* Compact mark on small screens */}
-          <Image
-            src="/logo-mark.svg"
-            alt=""
-            aria-hidden
-            width={28}
-            height={28}
-            unoptimized
-            className="md:hidden select-none"
+            className="select-none"
           />
         </Link>
 
-        {/* Right-side nav */}
-        <div className="flex items-center gap-3">
-          {/* Subtle secondary button: Find a HifzTutor */}
+        {/* Desktop nav */}
+        <div className="hidden items-center gap-3 md:flex">
           <Link
             href="/tutors"
             className="rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors"
-            style={{ color: '#111629', borderColor: '#111629' }}
+            style={{ color: "#111629", borderColor: "#111629" }}
           >
             Find a HifzTutor
           </Link>
-
-          {/* Become a HifzTutor (links to /become-a-tutor) */}
           <Link
             href="/become-a-tutor"
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50"
+            className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
             Become a HifzTutor
           </Link>
-
-          {/* Sign in */}
           <Link
-            href="/student/signin"
-            className="rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors"
-            style={{ borderColor:BRAND.deep }}
+            href="/signin"
+            className={cn(
+              buttonVariants({ variant: "default", size: "sm" }),
+              "px-4 py-2 text-sm font-semibold tracking-wide"
+            )}
           >
+            <img src="/Login-Icon.svg" alt="" className="h-4 w-4" aria-hidden="true" />
             Log in
           </Link>
-
-          {/* Primary CTA: Get started */}
-          <Link
-            href="/student/signup"
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-900 hover:opacity-95"
-            style={{ backgroundColor: BRAND.yellow , borderColor:BRAND.deep }}
-          >
-            Get started
-          </Link>
         </div>
+
+        {/* Mobile trigger */}
+        <button
+          type="button"
+          className="flex h-10 w-10 items-center justify-center rounded-md md:hidden"
+          aria-label="Toggle navigation"
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen((prev) => !prev)}
+        >
+          <img src="/mobile-dropdown-icon.svg" alt="" className="h-5 w-6" aria-hidden="true" />
+        </button>
       </nav>
+
+      {/* Mobile dropdown */}
+      {mobileOpen ? (
+        <div className="md:hidden">
+          <div className="fixed inset-0 z-40">
+            <div
+              className="absolute inset-0 bg-black/40"
+              aria-hidden
+              onClick={() => setMobileOpen(false)}
+            />
+            <div className="absolute right-0 top-0 h-full w-72 max-w-[85vw] translate-x-0 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5">
+                <Link
+                  href="/signin"
+                  className="flex items-center gap-3 text-base font-semibold text-[#111629]"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Image src="/desktop-dropdown-icon.svg" alt="" width={24} height={24} className="select-none" />
+                  <span className="tracking-tight">Log in</span>
+                </Link>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  className="rounded-md p-1 text-2xl text-slate-500 hover:text-slate-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <nav className="flex flex-col gap-1 px-2 py-4 text-[#111629]">
+                {navItems.map((item) => {
+                  const active = isActive(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "relative flex items-center gap-3 rounded-lg px-3 py-3 text-base font-semibold transition-colors",
+                        active ? "bg-[#F4F6FB]" : "hover:bg-slate-50"
+                      )}
+                    >
+                      <span>{item.label}</span>
+                      {active ? (
+                        <span
+                          aria-hidden
+                          className="absolute left-0 top-1/2 h-5 w-1.5 -translate-y-1/2 rounded-full bg-[#D3F501]"
+                        />
+                      ) : null}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

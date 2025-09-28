@@ -109,14 +109,18 @@ export default function ThreadPage() {
     (async () => {
       try {
         // Auth
-        const { data: s } = await supabase.auth.getSession();
-        const session = s?.session;
-        if (!session) {
-          router.replace("/student/signin");
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error("Failed to verify auth in messages thread:", userError.message);
+        }
+        const user = userData?.user;
+        if (!user) {
+          const next = typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : undefined;
+          router.replace(next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
           return;
         }
-        const myId = session.user.id;
-        const myEmail = session.user.email ?? null;
+        const myId = user.id;
+        const myEmail = user.email ?? null;
         if (!mounted) return;
         setMe({ id: myId, email: myEmail });
 

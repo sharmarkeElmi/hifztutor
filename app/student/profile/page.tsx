@@ -44,13 +44,16 @@ export default function ProfilePage() {
      */
     let active = true;
     (async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
-      if (!session) {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error("Failed to verify auth in student profile:", userError.message);
+      }
+      const user = userData?.user;
+      if (!user) {
         router.replace("/signin");
         return;
       }
-      const userId = session.user.id;
+      const userId = user.id;
 
       const { data: profile } = await supabase
         .from("profiles")

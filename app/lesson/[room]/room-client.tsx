@@ -200,13 +200,24 @@ export default function RoomClient({ roomName, livekitUrl }: Props) {
 
     (async () => {
       // 1) Require auth
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
-      if (!session) {
-        router.replace("/student/signin");
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error("Failed to verify auth for lesson room:", userError.message);
+      }
+      const user = userData?.user;
+      if (!user) {
+        const next = typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : undefined;
+        router.replace(next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
         return;
       }
-      const user = session.user;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session ?? null;
+      if (!session?.access_token) {
+        setApiError("We couldn't verify your session. Please sign in again.");
+        setLoading(false);
+        return;
+      }
 
       // 2) Load role + full name from profiles
       const { data: profile, error: profileErr } = await supabase
