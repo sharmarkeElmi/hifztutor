@@ -100,7 +100,10 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
   };
 
   return (
-    <div className="w-full max-w-[460px] space-y-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+    <div
+      className="w-full max-w-[460px] space-y-8 rounded-lg border-[3px] bg-white p-8"
+      style={{ borderColor: "#000" }}
+    >
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-semibold tracking-tight text-[#111629]">Log In</h1>
       </div>
@@ -119,7 +122,7 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium text-[#0F172A]">
+          <label htmlFor="email" className="block text-base font-semibold tracking-tight text-[#111629]">
             Email address
           </label>
           <input
@@ -128,7 +131,7 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
             autoComplete="email"
             required
             {...register("email")}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm leading-relaxed placeholder:text-slate-400 transition-colors hover:border-black focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501] focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base leading-relaxed placeholder:text-slate-400 transition-colors hover:border-black focus:border-black focus:ring-2 focus:ring-black focus:outline-none"
             placeholder="you@example.com"
           />
           {errors.email ? (
@@ -140,7 +143,7 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label htmlFor="password" className="text-sm font-medium text-[#0F172A]">
+            <label htmlFor="password" className="block text-base font-semibold tracking-tight text-[#111629]">
               Password
             </label>
             <button
@@ -157,7 +160,7 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
             autoComplete="current-password"
             required
             {...register("password")}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm leading-relaxed placeholder:text-slate-400 transition-colors hover:border-black focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501] focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base leading-relaxed placeholder:text-slate-400 transition-colors hover:border-black focus:border-black focus:ring-2 focus:ring-black focus:outline-none"
             placeholder="Enter your password"
           />
           {errors.password ? (
@@ -173,7 +176,20 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
           </div>
         ) : null}
 
-        <Button type="submit" disabled={loading} className="w-full text-base font-semibold">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-lg text-base font-bold tracking-wide uppercase transition-colors"
+          style={{ backgroundColor: "#D3F501", color: "#111", borderColor: "#000" }}
+          onMouseEnter={(e) => {
+            if (!loading) {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#b8da01";
+            }
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#D3F501";
+          }}
+        >
           {loading ? "Signing you in…" : "Log in"}
         </Button>
       </form>

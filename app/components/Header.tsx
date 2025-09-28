@@ -55,8 +55,10 @@ export default function Header() {
         <div className="hidden items-center gap-3 md:flex">
           <Link
             href="/tutors"
-            className="rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors"
-            style={{ color: "#111629", borderColor: "#111629" }}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "h-11 rounded-lg px-5 text-[#111629] transition-colors hover:bg-[#F4F6FB]"
+            )}
           >
             Find a HifzTutor
           </Link>
@@ -70,10 +72,10 @@ export default function Header() {
             href="/signin"
             className={cn(
               buttonVariants({ variant: "default", size: "sm" }),
-              "px-4 py-2 text-sm font-semibold tracking-wide"
+              "h-11 rounded-lg px-5 text-sm font-semibold tracking-wide transition-colors hover:brightness-95"
             )}
           >
-            <img src="/Login-Icon.svg" alt="" className="h-4 w-4" aria-hidden="true" />
+            <Image src="/Login-Icon.svg" alt="" aria-hidden width={16} height={16} className="h-4 w-4" />
             Log in
           </Link>
         </div>
@@ -86,7 +88,7 @@ export default function Header() {
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((prev) => !prev)}
         >
-          <img src="/mobile-dropdown-icon.svg" alt="" className="h-5 w-6" aria-hidden="true" />
+          <Image src="/mobile-dropdown-icon.svg" alt="" aria-hidden width={20} height={22} className="h-5 w-6" />
         </button>
       </nav>
 

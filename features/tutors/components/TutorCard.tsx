@@ -203,14 +203,22 @@ export default function TutorCard({ tutor, href, onMessageHref, saveAction }: Tu
           <div className="flex w-full gap-2 md:flex-col md:gap-3">
             <Link
               href={href}
-              className="flex h-11 flex-1 items-center justify-center rounded-lg border-2 border-[#111629] bg-[#D3F501] px-4 text-sm font-semibold text-[#111629] transition hover:bg-[#BEE200] md:w-full"
+              className="flex flex-1 items-center justify-center rounded-lg border-2 border-black px-8 text-base font-semibold tracking-wide text-[#111629] transition-colors md:w-full"
+              style={{ backgroundColor: "#D3F501", height: "80px" }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.backgroundColor = "#b8da01";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.backgroundColor = "#D3F501";
+              }}
               onClick={(event) => event.stopPropagation()}
             >
               Book trial lesson
             </Link>
             <Link
               href={onMessageHref}
-              className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-2 text-sm font-semibold text-[#111629] transition hover:bg-[#F4F6FB] md:w-full"
+              className="flex flex-1 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-6 text-base font-semibold text-[#111629] transition hover:bg-[#F4F6FB] md:w-full"
+              style={{ height: "80px" }}
               onClick={(event) => event.stopPropagation()}
             >
               <span className="md:hidden" aria-hidden>
