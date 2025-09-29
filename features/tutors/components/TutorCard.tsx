@@ -204,7 +204,7 @@ export default function TutorCard({ tutor, href, onMessageHref, saveAction }: Tu
             <Link
               href={href}
               className="flex flex-1 items-center justify-center rounded-lg border-2 border-black px-8 text-base font-semibold tracking-wide text-[#111629] transition-colors md:w-full"
-              style={{ backgroundColor: "#D3F501", height: "80px" }}
+              style={{ backgroundColor: "#D3F501", height: "96px" }}
               onMouseEnter={(event) => {
                 event.currentTarget.style.backgroundColor = "#b8da01";
               }}
@@ -218,7 +218,7 @@ export default function TutorCard({ tutor, href, onMessageHref, saveAction }: Tu
             <Link
               href={onMessageHref}
               className="flex flex-1 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-6 text-base font-semibold text-[#111629] transition hover:bg-[#F4F6FB] md:w-full"
-              style={{ height: "80px" }}
+              style={{ height: "96px" }}
               onClick={(event) => event.stopPropagation()}
             >
               <span className="md:hidden" aria-hidden>
