@@ -47,7 +47,7 @@ export default function SettingsShell({
   const active = useMemo(() => tabs.find((t) => t.key === activeKey)?.key ?? tabs[0]?.key, [tabs, activeKey]);
 
   return (
-      <section className="relative w-full px-0 sm:px-6 lg:px-8">
+    <section className="relative w-full bg-white px-0 sm:px-6 lg:px-8 pb-16 min-h-[calc(100vh-72px)]">
 
       {/* Mobile horizontal tabs (true full-bleed) */}
       <div className="block sm:hidden relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-white border-b border-t-0 border-slate-200 -mt-[6px]">
@@ -132,18 +132,21 @@ export default function SettingsShell({
 
         {/* Content pane */}
         <div className="sm:flex-1">
-          <div className="relative overflow-hidden rounded-2xl border bg-white p-6 sm:p-8 lg:p-10 shadow-md transition-shadow hover:shadow-lg max-w-3xl w-full mx-auto mt-6 sm:mt-12">
-            {title ? (
-              <div className="mb-4 border-b pb-3">
-                <h1 className="text-[22px] sm:text-2xl lg:text-[30px] font-bold tracking-tight leading-snug">{title}</h1>
-                {description ? (
-                  <p className="text-slate-600 mt-2 text-[16px] leading-relaxed">{description}</p>
-                ) : null}
-              </div>
-            ) : null}
+          <div
+            className="relative overflow-hidden rounded-2xl border-[3px] border-black bg-white p-6 sm:p-8 lg:p-10 max-w-3xl w-full mx-auto mt-6 sm:mt-12"
+            style={{ borderColor: "#000" }}
+          >
+            <div className="settings-pane space-y-10">
+              {title ? (
+                <div className="space-y-3">
+                  <h1 className="text-[22px] sm:text-2xl lg:text-[30px] font-bold tracking-tight leading-snug">{title}</h1>
+                  {description ? (
+                    <p className="text-slate-600 text-[16px] leading-relaxed">{description}</p>
+                  ) : null}
+                </div>
+              ) : null}
 
-            <div>
-              <div className="settings-pane space-y-10">{children}</div>
+              {children}
             </div>
 
             {/* Accent blob */}
@@ -160,19 +163,22 @@ export default function SettingsShell({
         .scrollbar-hide::-webkit-scrollbar { display: none; height: 0; width: 0; }
         .scrollbar-hide *::-webkit-scrollbar { display: none; height: 0; width: 0; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .settings-pane button {
+        .settings-pane button[type="submit"],
+        .settings-pane button[data-settings-submit="true"] {
           width: 100%;
           border-radius: 0.5rem;
           box-shadow: 0 1px 2px rgba(0,0,0,0.05);
           transition: all 0.2s;
         }
-        .settings-pane button:hover:not(:disabled) {
+        .settings-pane button[type="submit"]:hover:not(:disabled),
+        .settings-pane button[data-settings-submit="true"]:hover:not(:disabled) {
           filter: brightness(0.95);
         }
-        .settings-pane button:active:not(:disabled) {
+        .settings-pane button[type="submit"]:active:not(:disabled),
+        .settings-pane button[data-settings-submit="true"]:active:not(:disabled) {
           transform: translateY(1px);
         }
       `}</style>
-      </section>
+    </section>
   );
 }

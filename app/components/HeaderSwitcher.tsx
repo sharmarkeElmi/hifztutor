@@ -12,8 +12,12 @@ import Header from "./Header";
 export default function HeaderSwitcher({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/";
   const appPrefixes = ["/student", "/tutor", "/lesson", "/inbox", "/messages"];
-  const authPages = ["/signin", "/student/signup", "/tutor/signup"]; // auth flows still use public header but custom layout
-  const isAppArea = appPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const authPages = ["/signin"]; // login uses centered layout; signup pages handle layout themselves
+  const signupPages = ["/student/signup", "/tutor/signup"];
+  const isAppArea = appPrefixes.some((p) => {
+    if (signupPages.includes(pathname)) return false;
+    return pathname === p || pathname.startsWith(`${p}/`);
+  });
   const isAuthPage = authPages.includes(pathname);
 
   if (isAppArea) {

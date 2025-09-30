@@ -1,40 +1,73 @@
 // features/settings/components/EmailChangeForm.tsx
 import * as React from "react";
 import { Button } from "@components/ui/button";
+import { formStack, formLabel, formInput, formError } from "@/components/forms/classes";
 
 export type EmailChangeValues = {
+  currentEmail: string;
   newEmail: string;
 };
 
 type EmailChangeFormProps = {
   onSubmit: (values: EmailChangeValues) => Promise<void> | void;
   isSubmitting?: boolean;
+  currentEmail?: string | null;
 };
 
-export default function EmailChangeForm({ onSubmit, isSubmitting = false }: EmailChangeFormProps) {
-  const [email, setEmail] = React.useState("");
+export default function EmailChangeForm({
+  onSubmit,
+  isSubmitting = false,
+  currentEmail: initialEmail = "",
+}: EmailChangeFormProps) {
+  const [currentEmail, setCurrentEmail] = React.useState("");
+  const [newEmail, setNewEmail] = React.useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await onSubmit({ newEmail: email });
+    await onSubmit({ currentEmail, newEmail });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">New email</span>
+    <form onSubmit={handleSubmit} className={formStack}>
+      <div className="space-y-1">
+        <label htmlFor="current-email" className={formLabel}>
+          Current email address
+        </label>
         <input
+          id="current-email"
+          type="email"
+          aria-label="Current email"
+          className={formInput}
+          value={currentEmail}
+          onChange={(e) => setCurrentEmail(e.target.value)}
+          required
+          placeholder={initialEmail || "current@example.com"}
+        />
+        {initialEmail ? (
+          <p className="text-xs text-slate-500">
+            Your account email is <span className="font-semibold">{initialEmail}</span>.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="new-email" className={formLabel}>
+          New email address
+        </label>
+        <input
+          id="new-email"
           type="email"
           aria-label="New email"
-          className="h-10 rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          className={formInput}
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
           required
+          placeholder="you@example.com"
         />
-      </label>
+      </div>
 
       <div className="flex items-center justify-end pt-2">
-        <Button type="submit" variant="default" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting} variant="formPrimary" className="px-6">
           {isSubmitting ? "Saving…" : "Change email"}
         </Button>
       </div>

@@ -75,8 +75,8 @@ export default function Header() {
               "h-11 rounded-lg px-5 text-sm font-semibold tracking-wide transition-colors hover:brightness-95"
             )}
           >
-            <Image src="/Login-Icon.svg" alt="" aria-hidden width={16} height={16} className="h-4 w-4" />
-            Log in
+            <Image src="/Login-Icon.svg" alt="" aria-hidden width={18} height={18} className="h-[18px] w-[18px]" />
+            <span className="leading-none">Log in</span>
           </Link>
         </div>
 

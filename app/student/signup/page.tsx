@@ -1,47 +1,37 @@
 "use client";
 
-/**
- * Student — Sign up page
- * -----------------------------------------
- * Purpose:
- *  - Register a new student with email/password.
- *  - Store role in Supabase Auth metadata (role: "student").
- *  - If we get a session immediately (confirmation off), create profile row + go to dashboard.
- *  - Otherwise, send the user to /signin with a "check your email" hint.
- *
- * Notes:
- *  - We only upsert the profile when we actually have a session (i.e., a user id).
- *  - Tutor flow (role: "tutor") lives separately under /tutor/signup.
- */
-
-import Header from "@/app/components/Header";
-import { useState, useMemo } from "react";
-import { useForm } from "react-hook-form";
-
-// =====================
-// FORM VALIDATION
-// =====================
+import { useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
-// =====================
-// NEXT.JS + SUPABASE
-// =====================
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { Button } from "@components/ui/button";
+import FormCard from "@/components/forms/FormCard";
+import { formStack, formLabel, formInput, formHelp, formError } from "@/components/forms/classes";
 
-// Describe valid form values for signup
-const schema = z.object({
-  full_name: z.string().min(2, { message: "Full name is required" }),
-  email: z.string().email({ message: "Please enter a valid email" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
+const schema = z
+  .object({
+    full_name: z.string().min(2, { message: "Full name is required" }),
+    email: z.string().email({ message: "Please enter a valid email" }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+    confirm_password: z.string().min(6, { message: "Please confirm your password" }),
+  })
+  .superRefine((values, ctx) => {
+    if (values.password !== values.confirm_password) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirm_password"],
+        message: "Passwords must match",
+      });
+    }
+  });
+
 type Values = z.infer<typeof schema>;
 
 export default function StudentSignUpPage() {
   const router = useRouter();
-
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -51,34 +41,34 @@ export default function StudentSignUpPage() {
     []
   );
 
-  // =====================
-  // LOCAL UI STATE
-  // =====================
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Hook up react-hook-form with Zod schema
-  const { register, handleSubmit, formState: { errors } } = useForm<Values>({
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: "", email: "", password: "" },
+    defaultValues: { full_name: "", email: "", password: "", confirm_password: "" },
   });
 
-  // =====================
-  // SUBMIT HANDLER
-  // =====================
+  const passwordValue = useWatch({ control, name: "password" });
+  const confirmPasswordValue = useWatch({ control, name: "confirm_password" });
+  const passwordsMatch =
+    passwordValue && confirmPasswordValue && passwordValue === confirmPasswordValue;
+
   const onSubmit = async (values: Values) => {
     setLoading(true);
     setError(null);
 
-    // Create the user in Supabase Auth.
-    // We include metadata: role: "student" + full_name for convenience.
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
         data: { full_name: values.full_name, role: "student" },
-        // After email confirmation, user lands on the student sign-in page
         emailRedirectTo:
           typeof window !== "undefined"
             ? `${window.location.origin}/signin?checkEmail=1`
@@ -92,9 +82,7 @@ export default function StudentSignUpPage() {
       return;
     }
 
-    // If confirmation is OFF, Supabase may return an active session + user now.
     if (signUpData.session && signUpData.user) {
-      // We have a user id, so create/update the profile row.
       await supabase.from("profiles").upsert({
         id: signUpData.user.id,
         full_name: values.full_name,
@@ -103,7 +91,6 @@ export default function StudentSignUpPage() {
 
       setLoading(false);
 
-      // Prefer full reload so subsequent pages see the fresh session immediately
       if (typeof window !== "undefined") {
         window.location.assign("/student/dashboard");
       } else {
@@ -112,108 +99,143 @@ export default function StudentSignUpPage() {
       return;
     }
 
-    // Most setups require email confirmation → send user to sign-in with hint
     setLoading(false);
     router.push("/signin?checkEmail=1");
   };
 
-  // =====================
-  // VIEW
-  // =====================
   return (
-    <>
-      <Header />
-      <section className="max-w-md mx-auto mt-12 space-y-8 bg-white p-8 rounded-lg shadow-md border border-gray-200">
-        <h1 className="text-3xl font-bold text-center">Student — Sign up</h1>
+    <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-white px-4 py-12">
+      <FormCard
+        title="Create your student account"
+        description="Join HifzTutor to book lessons and stay on top of your progress."
+        className="w-full max-w-[460px] space-y-8"
+      >
+        {error ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            {error}
+          </div>
+        ) : null}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Full name */}
-          <div>
-            <label className="block text-sm font-medium mb-1 font-sans" htmlFor="full_name">Full name</label>
+        <form onSubmit={handleSubmit(onSubmit)} className={formStack} noValidate>
+          <div className="space-y-1">
+            <label htmlFor="full_name" className={formLabel}>
+              Full name
+            </label>
             <input
               id="full_name"
               type="text"
               required
               autoFocus
               {...register("full_name")}
-              className="w-full p-3 border rounded focus:ring-2 focus:ring-brand-yellow focus:outline-none placeholder-gray-400 font-sans"
+              className={formInput}
               placeholder="e.g. Ahmed Ali"
             />
-            {errors.full_name && <p className="text-red-500 text-sm mt-1 font-sans">{errors.full_name.message}</p>}
+            {errors.full_name ? (
+              <p className={formError} role="alert">
+                {errors.full_name.message}
+              </p>
+            ) : null}
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium mb-1 font-sans" htmlFor="email">Email</label>
+          <div className="space-y-1">
+            <label htmlFor="email" className={formLabel}>
+              Email address
+            </label>
             <input
               id="email"
               type="email"
               required
               autoComplete="email"
               {...register("email")}
-              className="w-full p-3 border rounded focus:ring-2 focus:ring-brand-yellow focus:outline-none placeholder-gray-400 font-sans"
+              className={formInput}
               placeholder="you@example.com"
             />
-            {errors.email && <p className="text-red-500 text-sm mt-1 font-sans">{errors.email.message}</p>}
+            {errors.email ? (
+              <p className={formError} role="alert">
+                {errors.email.message}
+              </p>
+            ) : null}
           </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium mb-1 font-sans" htmlFor="password">Password</label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                required
-                autoComplete="new-password"
-                {...register("password")}
-                className="w-full p-3 pr-20 border rounded focus:ring-2 focus:ring-brand-yellow focus:outline-none placeholder-gray-400 font-sans"
-                placeholder="••••••••"
-                aria-describedby="password-help"
-              />
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className={formLabel}>
+                Password
+              </label>
               <button
                 type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                className="absolute inset-y-0 right-3 my-auto h-8 px-4 text-xs rounded bg-[#1d7f63] text-white hover:bg-[#16624d] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition font-sans"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="text-xs font-semibold text-[#111629] underline"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
-            <p id="password-help" className="mt-1 text-xs text-gray-500 font-sans">At least 6 characters.</p>
-            {errors.password && <p className="text-red-500 text-sm mt-1 font-sans">{errors.password.message}</p>}
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              {...register("password")}
+              className={formInput}
+              placeholder="Create a password"
+            />
+            <p className={formHelp}>At least 6 characters.</p>
+            {errors.password ? (
+              <p className={formError} role="alert">
+                {errors.password.message}
+              </p>
+            ) : null}
           </div>
 
-          {/* Global error */}
-          {error && (
-            <p className="text-red-600 text-sm font-sans" role="alert" aria-live="assertive">{error}</p>
-          )}
+          <div className="space-y-1">
+            <label htmlFor="confirm_password" className={formLabel}>
+              Confirm password
+            </label>
+            <input
+              id="confirm_password"
+              type="password"
+              required
+              autoComplete="new-password"
+              {...register("confirm_password")}
+              className={formInput}
+              placeholder="Re-enter your password"
+            />
+            {errors.confirm_password ? (
+              <p className={formError} role="alert">
+                {errors.confirm_password.message}
+              </p>
+            ) : (
+              confirmPasswordValue ? (
+                <p className="text-sm" role="status" aria-live="polite">
+                  <span className={passwordsMatch ? "text-[#10B981]" : "text-red-600"}>
+                    {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+                  </span>
+                </p>
+              ) : null
+            )}
+          </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#FFD600] text-black py-3 rounded-lg font-medium transition duration-200 hover:bg-[#e6c200] active:bg-[#cca700] focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed font-sans"
-          >
-            {loading ? "Signing up..." : "Sign up"}
-          </button>
+          <Button type="submit" disabled={loading} variant="formPrimary" className="w-full">
+            {loading ? "Signing up…" : "Sign up"}
+          </Button>
         </form>
 
-        {/* Auth cross-links */}
-        <div className="text-center text-sm">
-          Already have an account?{" "}
-          <Link href="/signin" className="text-blue-600 hover:underline">
-            Sign in
+        <div className="space-y-3 rounded-xl bg-slate-50 p-4 text-center">
+          <p className="text-sm font-semibold tracking-tight text-[#111629]">Already have an account?</p>
+          <Link
+            href="/signin"
+            className="inline-flex w-full items-center justify-center rounded-lg border border-[#CED2D9] px-4 py-2 text-sm font-semibold text-[#111629] transition hover:border-[#111629] hover:bg-[#F4F6FB]"
+          >
+            Log in instead
           </Link>
+          <p className="text-xs leading-relaxed text-slate-500">
+            Want to teach instead?{" "}
+            <Link href="/tutor/signup" className="font-semibold text-[#111629] underline">
+              Become a tutor
+            </Link>
+          </p>
         </div>
-
-        <div className="text-center text-xs text-muted-foreground">
-          Are you a tutor?{" "}
-          <Link href="/tutor/signup" className="text-blue-600 hover:underline">
-            Create a tutor account
-          </Link>
-        </div>
-      </section>
-    </>
+      </FormCard>
+    </div>
   );
 }

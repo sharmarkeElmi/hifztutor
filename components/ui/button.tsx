@@ -15,6 +15,8 @@ const buttonVariants = cva(
         secondary: "text-black bg-gray-100 border-2 !border-black hover:bg-gray-200",
         ghost: "text-black bg-transparent border-transparent hover:bg-gray-100",
         link: "text-black underline underline-offset-4 hover:text-gray-700",
+        formPrimary:
+          "text-[#111629] bg-[#D3F501] border-2 !border-black uppercase tracking-wide font-bold hover:brightness-95",
       },
       size: {
         default: "h-12 px-6 py-3.5 has-[>svg]:px-5",

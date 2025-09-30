@@ -49,6 +49,7 @@ export default function TutorSettingsPage() {
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState<string>("");
 
   const [notifications, setNotifications] = useState<NotificationsState>({
     lessonReminders: true,
@@ -63,7 +64,10 @@ export default function TutorSettingsPage() {
     let cancelled = false;
     async function load() {
       try {
-        const nRes = await fetch("/api/settings/notifications", { credentials: "include" });
+        const [nRes, pRes] = await Promise.all([
+          fetch("/api/settings/notifications", { credentials: "include" }),
+          fetch("/api/settings/profile", { credentials: "include" }),
+        ]);
         if (!cancelled && nRes.ok) {
           const n = await nRes.json();
           setNotifications({
@@ -74,6 +78,10 @@ export default function TutorSettingsPage() {
             digest: (n.digest as Digest) ?? "daily",
             quietHours: !!n.quiet_hours,
           });
+        }
+        if (!cancelled && pRes.ok) {
+          const p = await pRes.json();
+          setCurrentEmail(p.email ?? "");
         }
       } catch {
         // keep UI usable
@@ -87,21 +95,38 @@ export default function TutorSettingsPage() {
 
   // --- Submission handlers routed to feature components ---
 
-  async function submitEmail({ newEmail }: EmailChangeValues) {
+  async function submitEmail({ currentEmail: submittedEmail, newEmail }: EmailChangeValues) {
     setSavingEmail(true);
     setStatus(null);
     try {
-      if (!newEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) {
-        setStatus({ type: "error", message: "Please enter a valid email address." });
+      if (!submittedEmail || !newEmail) {
+        setStatus({ type: "error", message: "Please enter valid email addresses." });
+        setSavingEmail(false);
         return;
       }
-      const r = (await changeEmail({ newEmail })) as { maybeVerificationRequired?: boolean } | void;
+      const submittedNormalized = submittedEmail.trim().toLowerCase();
+      const storedNormalized = (currentEmail ?? "").trim().toLowerCase();
+      if (!storedNormalized || submittedNormalized !== storedNormalized) {
+        setStatus({ type: "error", message: "Current email does not match our records." });
+        setSavingEmail(false);
+        return;
+      }
+      if (submittedNormalized === newEmail.trim().toLowerCase()) {
+        setStatus({ type: "error", message: "Please enter a different email address." });
+        setSavingEmail(false);
+        return;
+      }
+
+      const r = (await changeEmail({ currentEmail: submittedEmail, newEmail })) as {
+        maybeVerificationRequired?: boolean;
+      } | void;
       setStatus({
         type: "success",
         message: r?.maybeVerificationRequired
           ? "Email updated. Check your inbox if verification is required."
           : "Email updated.",
       });
+      setCurrentEmail(newEmail);
     } catch (err: unknown) {
       setStatus({ type: "error", message: getErrorMessage(err) || "Could not update email" });
     } finally {
@@ -194,7 +219,11 @@ export default function TutorSettingsPage() {
       ) : null}
 
       {activeKey === "email" && (
-        <EmailChangeForm onSubmit={submitEmail} isSubmitting={savingEmail} />
+        <EmailChangeForm
+          onSubmit={submitEmail}
+          isSubmitting={savingEmail}
+          currentEmail={currentEmail}
+        />
       )}
 
       {activeKey === "password" && (

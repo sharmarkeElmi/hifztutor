@@ -34,8 +34,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json()) as { email?: string };
+  const body = (await req.json()) as { email?: string; currentEmail?: string };
   const email = (body.email ?? "").trim();
+  const currentEmail = (body.currentEmail ?? "").trim();
+  if (!currentEmail || currentEmail.toLowerCase() !== (user.email ?? "").trim().toLowerCase()) {
+    return NextResponse.json({ error: "Current email does not match" }, { status: 400 });
+  }
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: "Enter a valid email." }, { status: 400 });
   }

@@ -7,7 +7,7 @@ export default function useChangeEmail() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email: values.newEmail }),
+      body: JSON.stringify({ currentEmail: values.currentEmail, newEmail: values.newEmail }),
     });
     const j = (await res.json().catch(() => ({}))) as { error?: string; maybeVerificationRequired?: boolean };
     if (!res.ok) throw new Error(j.error || "Failed to update email");

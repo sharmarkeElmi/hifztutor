@@ -19,9 +19,20 @@ export const passwordSchema = z
     path: ["confirmNewPassword"],
   });
 
-export const emailChangeSchema = z.object({
-  newEmail: z.string().email(),
-});
+export const emailChangeSchema = z
+  .object({
+    currentEmail: z.string().email(),
+    newEmail: z.string().email(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.currentEmail === values.newEmail) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["newEmail"],
+        message: "New email must be different",
+      });
+    }
+  });
 
 export const notificationsSchema = z.object({
   marketingEmails: z.boolean(),

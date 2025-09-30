@@ -63,6 +63,7 @@ export async function GET() {
     timezone: data?.timezone ?? "",
     locale: data?.locale ?? "",
     languages: data?.languages ?? [],
+    email: user.email ?? "",
   });
 }
 

@@ -46,6 +46,7 @@ type StudentProfileState = {
   timezone: string;
   locale: string;
   languages: string;
+  email: string;
   avatarUrl?: string;
 };
 
@@ -67,6 +68,7 @@ export default function StudentSettingsPage() {
     timezone: "",
     locale: "",
     languages: "",
+    email: "",
   });
 
   const [notifications, setNotifications] = useState<NotificationsState>({
@@ -112,6 +114,7 @@ export default function StudentSettingsPage() {
             timezone: p.timezone ?? "",
             locale: p.locale ?? "",
             languages: Array.isArray(p.languages) ? p.languages.join(", ") : p.languages ?? "",
+            email: p.email ?? prev.email ?? "",
           }));
         }
         if (!cancelled && nRes.ok) {
@@ -182,14 +185,30 @@ export default function StudentSettingsPage() {
     }
   }
 
-  async function submitEmail({ newEmail }: EmailChangeValues) {
+  async function submitEmail({ currentEmail, newEmail }: EmailChangeValues) {
     setSavingEmail(true);
     setStatus(null);
     try {
-      const r = (await changeEmail({ newEmail })) as { maybeVerificationRequired?: boolean } | void;
-      setStatus(r?.maybeVerificationRequired
-        ? "Email updated. Check your inbox if verification is required."
-        : "Email updated.");
+      const currentNormalized = currentEmail.trim().toLowerCase();
+      const storedNormalized = (profile.email ?? "").trim().toLowerCase();
+      if (!storedNormalized || currentNormalized !== storedNormalized) {
+        setStatus("Current email does not match our records.");
+        setSavingEmail(false);
+        return;
+      }
+      if (currentNormalized === newEmail.trim().toLowerCase()) {
+        setStatus("Please enter a different email address.");
+        setSavingEmail(false);
+        return;
+      }
+
+      const r = (await changeEmail({ currentEmail, newEmail })) as { maybeVerificationRequired?: boolean } | void;
+      setStatus(
+        r?.maybeVerificationRequired
+          ? "Email updated. Check your inbox if verification is required."
+          : "Email updated."
+      );
+      setProfile((prev) => ({ ...prev, email: newEmail }));
     } catch (err: unknown) {
       setStatus(getErrorMessage(err) || "Could not update email");
     } finally {
@@ -260,7 +279,11 @@ export default function StudentSettingsPage() {
       )}
 
       {activeKey === "email" && (
-        <EmailChangeForm onSubmit={submitEmail} isSubmitting={savingEmail} />
+        <EmailChangeForm
+          onSubmit={submitEmail}
+          isSubmitting={savingEmail}
+          currentEmail={profile.email}
+        />
       )}
 
       {activeKey === "notifications" && (

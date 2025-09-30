@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@components/ui/button";
+import FormCard from "@/components/forms/FormCard";
+import { formStack, formLabel, formInput, formError } from "@/components/forms/classes";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client-browser";
 
 const schema = z.object({
@@ -100,14 +102,8 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
   };
 
   return (
-    <div
-      className="w-full max-w-[460px] space-y-8 rounded-lg border-[3px] bg-white p-8"
-      style={{ borderColor: "#000" }}
-    >
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-[#111629]">Log In</h1>
-      </div>
-
+    <FormCard title="Log In">
+      
       {showCheckEmail ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">
           Please confirm your email from the link we sent, then sign in with your password to continue.
@@ -120,9 +116,9 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className={formStack} noValidate>
         <div className="space-y-1">
-          <label htmlFor="email" className="block text-base font-semibold tracking-tight text-[#111629]">
+          <label htmlFor="email" className={formLabel}>
             Email address
           </label>
           <input
@@ -131,11 +127,11 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
             autoComplete="email"
             required
             {...register("email")}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base leading-relaxed placeholder:text-slate-400 transition-colors hover:border-black focus:border-black focus:ring-2 focus:ring-black focus:outline-none"
+            className={formInput}
             placeholder="you@example.com"
           />
           {errors.email ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className={formError} role="alert">
               {errors.email.message}
             </p>
           ) : null}
@@ -143,7 +139,7 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label htmlFor="password" className="block text-base font-semibold tracking-tight text-[#111629]">
+            <label htmlFor="password" className={formLabel}>
               Password
             </label>
             <button
@@ -160,11 +156,11 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
             autoComplete="current-password"
             required
             {...register("password")}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base leading-relaxed placeholder:text-slate-400 transition-colors hover:border-black focus:border-black focus:ring-2 focus:ring-black focus:outline-none"
+            className={formInput}
             placeholder="Enter your password"
           />
           {errors.password ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className={formError} role="alert">
               {errors.password.message}
             </p>
           ) : null}
@@ -176,20 +172,7 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
           </div>
         ) : null}
 
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg text-base font-bold tracking-wide uppercase transition-colors"
-          style={{ backgroundColor: "#D3F501", color: "#111", borderColor: "#000" }}
-          onMouseEnter={(e) => {
-            if (!loading) {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#b8da01";
-            }
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#D3F501";
-          }}
-        >
+        <Button type="submit" disabled={loading} variant="formPrimary" className="w-full">
           {loading ? "Signing you in…" : "Log in"}
         </Button>
       </form>
@@ -214,6 +197,6 @@ export default function SignInClient({ nextPath, showCheckEmail = false, showRol
           Choose the path that matches how you plan to use HifzTutor and get started in minutes.
         </p>
       </div>
-    </div>
+    </FormCard>
   );
 }

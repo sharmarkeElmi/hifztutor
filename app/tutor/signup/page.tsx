@@ -1,30 +1,37 @@
 "use client";
 
-import Header from "@/app/components/Header"; // Public navigation bar
-import { useState, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { Button } from "@components/ui/button";
+import FormCard from "@/components/forms/FormCard";
+import { formStack, formLabel, formInput, formHelp, formError } from "@/components/forms/classes";
 
-// -----------------------------
-// Validation schema (Zod)
-// -----------------------------
-const schema = z.object({
-  full_name: z.string().min(2, { message: "Full name is required" }),
-  email: z.string().email({ message: "Please enter a valid email" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
+const schema = z
+  .object({
+    full_name: z.string().min(2, { message: "Full name is required" }),
+    email: z.string().email({ message: "Please enter a valid email" }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+    confirm_password: z.string().min(6, { message: "Please confirm your password" }),
+  })
+  .superRefine((values, ctx) => {
+    if (values.password !== values.confirm_password) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirm_password"],
+        message: "Passwords must match",
+      });
+    }
+  });
 
-// Infer the form values type from the schema
 type Values = z.infer<typeof schema>;
 
 export default function TutorSignUpPage() {
   const router = useRouter();
-
-  // Cookie-aware Supabase client for client components
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -36,20 +43,26 @@ export default function TutorSignUpPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false); // toggle visibility
+  const [showPassword, setShowPassword] = useState(false);
 
-  // react-hook-form setup with Zod
-  const { register, handleSubmit, formState: { errors } } = useForm<Values>({
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: "", email: "", password: "" },
+    defaultValues: { full_name: "", email: "", password: "", confirm_password: "" },
   });
 
-  // Submit handler
+  const passwordValue = useWatch({ control, name: "password" });
+  const confirmPasswordValue = useWatch({ control, name: "confirm_password" });
+  const passwordsMatch = passwordValue && confirmPasswordValue && passwordValue === confirmPasswordValue;
+
   const onSubmit = async (values: Values) => {
     setLoading(true);
     setError(null);
 
-    // Create auth user with role metadata and redirect after email confirm
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
@@ -68,9 +81,7 @@ export default function TutorSignUpPage() {
       return;
     }
 
-    // If confirmation is OFF, Supabase may return an active session + user now
     if (signUpData.session && signUpData.user) {
-      // Ensure profile row exists with correct role
       await supabase.from("profiles").upsert({
         id: signUpData.user.id,
         full_name: values.full_name,
@@ -78,7 +89,7 @@ export default function TutorSignUpPage() {
       });
 
       setLoading(false);
-      // Full reload helps downstream client pages see fresh auth cookie
+
       if (typeof window !== "undefined") {
         window.location.assign("/tutor/dashboard");
       } else {
@@ -87,110 +98,143 @@ export default function TutorSignUpPage() {
       return;
     }
 
-    // Most setups require email confirmation → send user to sign-in with hint
     setLoading(false);
     router.push("/signin?checkEmail=1");
   };
 
   return (
-    <>
-      <Header />
+    <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-white px-4 py-12">
+      <FormCard
+        title="Become a tutor on HifzTutor"
+        description="Create your tutor account to connect with students around the world."
+        className="w-full max-w-[460px] space-y-8"
+      >
+        {error ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            {error}
+          </div>
+        ) : null}
 
-      <section className="max-w-md mx-auto mt-12 space-y-8 bg-white p-8 rounded-lg shadow-md border border-gray-200">
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-center font-sans">Tutor — Sign up</h1>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Full name */}
-          <div>
-            <label className="block text-sm font-medium mb-1 font-sans" htmlFor="full_name">Full name</label>
+        <form onSubmit={handleSubmit(onSubmit)} className={formStack} noValidate>
+          <div className="space-y-1">
+            <label htmlFor="full_name" className={formLabel}>
+              Full name
+            </label>
             <input
               id="full_name"
               type="text"
               required
               autoFocus
               {...register("full_name")}
-              className="w-full p-3 border rounded font-sans focus:ring-2 focus:ring-brand-yellow focus:outline-none placeholder-gray-400"
+              className={formInput}
               placeholder="e.g. Ustadh Ali"
             />
-            {errors.full_name && (
-              <p className="text-red-600 text-sm mt-1 font-sans" role="alert" aria-live="assertive">{errors.full_name.message}</p>
-            )}
+            {errors.full_name ? (
+              <p className={formError} role="alert">
+                {errors.full_name.message}
+              </p>
+            ) : null}
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium mb-1 font-sans" htmlFor="email">Email</label>
+          <div className="space-y-1">
+            <label htmlFor="email" className={formLabel}>
+              Email address
+            </label>
             <input
               id="email"
               type="email"
               required
               autoComplete="email"
               {...register("email")}
-              className="w-full p-3 border rounded font-sans focus:ring-2 focus:ring-brand-yellow focus:outline-none placeholder-gray-400"
+              className={formInput}
               placeholder="you@example.com"
             />
-            {errors.email && (
-              <p className="text-red-600 text-sm mt-1 font-sans" role="alert" aria-live="assertive">{errors.email.message}</p>
-            )}
+            {errors.email ? (
+              <p className={formError} role="alert">
+                {errors.email.message}
+              </p>
+            ) : null}
           </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium mb-1 font-sans" htmlFor="password">Password</label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                required
-                autoComplete="new-password"
-                {...register("password")}
-                className="w-full p-3 pr-20 border rounded font-sans focus:ring-2 focus:ring-brand-yellow focus:outline-none placeholder-gray-400"
-                placeholder="••••••••"
-                aria-describedby="password-help"
-              />
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className={formLabel}>
+                Password
+              </label>
               <button
                 type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                className="absolute inset-y-0 right-3 my-auto h-8 px-4 text-xs rounded bg-[#1d7f63] text-white hover:bg-[#16624d] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#3dc489] transition"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="text-xs font-semibold text-[#111629] underline"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
-            <p id="password-help" className="mt-1 text-xs text-gray-500 font-sans">At least 6 characters.</p>
-            {errors.password && (
-              <p className="text-red-600 text-sm mt-1 font-sans" role="alert" aria-live="assertive">{errors.password.message}</p>
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              {...register("password")}
+              className={formInput}
+              placeholder="Create a password"
+            />
+            <p className={formHelp}>At least 6 characters.</p>
+            {errors.password ? (
+              <p className={formError} role="alert">
+                {errors.password.message}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="confirm_password" className={formLabel}>
+              Confirm password
+            </label>
+            <input
+              id="confirm_password"
+              type="password"
+              required
+              autoComplete="new-password"
+              {...register("confirm_password")}
+              className={formInput}
+              placeholder="Re-enter your password"
+            />
+            {errors.confirm_password ? (
+              <p className={formError} role="alert">
+                {errors.confirm_password.message}
+              </p>
+            ) : (
+              confirmPasswordValue ? (
+                <p className="text-sm" role="status" aria-live="polite">
+                  <span className={passwordsMatch ? "text-[#10B981]" : "text-red-600"}>
+                    {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+                  </span>
+                </p>
+              ) : null
             )}
           </div>
 
-          {/* Global error */}
-          {error && (
-            <p className="text-red-600 text-sm font-sans" role="alert" aria-live="assertive">{error}</p>
-          )}
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#FFD600] text-black py-3 rounded-lg font-medium font-sans transition duration-200 hover:bg-[#e6c200] active:bg-[#cca700] focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Signing up..." : "Sign up"}
-          </button>
+          <Button type="submit" disabled={loading} variant="formPrimary" className="w-full">
+            {loading ? "Signing up…" : "Sign up"}
+          </Button>
         </form>
 
-        {/* Cross-links */}
-        <div className="text-center text-sm font-sans">
-          Already have a tutor account?{" "}
-          <Link href="/signin" className="text-blue-600 hover:underline">Sign in</Link>
+        <div className="space-y-3 rounded-xl bg-slate-50 p-4 text-center">
+          <p className="text-sm font-semibold tracking-tight text-[#111629]">Already teaching with us?</p>
+          <Link
+            href="/signin"
+            className="inline-flex w-full items-center justify-center rounded-lg border border-[#CED2D9] px-4 py-2 text-sm font-semibold text-[#111629] transition hover:border-[#111629] hover:bg-[#F4F6FB]"
+          >
+            Log in instead
+          </Link>
+          <p className="text-xs leading-relaxed text-slate-500">
+            Looking to learn?{" "}
+            <Link href="/student/signup" className="font-semibold text-[#111629] underline">
+              Sign up as a student
+            </Link>
+          </p>
         </div>
-
-        <div className="text-center text-xs text-muted-foreground font-sans">
-          Are you a student? {" "}
-          <Link href="/student/signup" className="text-blue-600 hover:underline">Student sign up</Link>
-        </div>
-      </section>
-    </>
+      </FormCard>
+    </div>
   );
 }
