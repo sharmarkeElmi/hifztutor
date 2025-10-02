@@ -279,11 +279,7 @@ export default function StudentSettingsPage() {
       )}
 
       {activeKey === "email" && (
-        <EmailChangeForm
-          onSubmit={submitEmail}
-          isSubmitting={savingEmail}
-          currentEmail={profile.email}
-        />
+        <EmailChangeForm onSubmit={submitEmail} isSubmitting={savingEmail} />
       )}
 
       {activeKey === "notifications" && (

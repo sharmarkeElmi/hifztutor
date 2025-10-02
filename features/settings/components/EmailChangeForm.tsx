@@ -1,7 +1,7 @@
 // features/settings/components/EmailChangeForm.tsx
 import * as React from "react";
 import { Button } from "@components/ui/button";
-import { formStack, formLabel, formInput, formError } from "@/components/forms/classes";
+import { formStack, formLabel, formInput, formHelp } from "@/components/forms/classes";
 
 export type EmailChangeValues = {
   currentEmail: string;
@@ -11,14 +11,9 @@ export type EmailChangeValues = {
 type EmailChangeFormProps = {
   onSubmit: (values: EmailChangeValues) => Promise<void> | void;
   isSubmitting?: boolean;
-  currentEmail?: string | null;
 };
 
-export default function EmailChangeForm({
-  onSubmit,
-  isSubmitting = false,
-  currentEmail: initialEmail = "",
-}: EmailChangeFormProps) {
+export default function EmailChangeForm({ onSubmit, isSubmitting = false }: EmailChangeFormProps) {
   const [currentEmail, setCurrentEmail] = React.useState("");
   const [newEmail, setNewEmail] = React.useState("");
 
@@ -41,13 +36,9 @@ export default function EmailChangeForm({
           value={currentEmail}
           onChange={(e) => setCurrentEmail(e.target.value)}
           required
-          placeholder={initialEmail || "current@example.com"}
+          placeholder="Enter the email on your account"
         />
-        {initialEmail ? (
-          <p className="text-xs text-slate-500">
-            Your account email is <span className="font-semibold">{initialEmail}</span>.
-          </p>
-        ) : null}
+        <p className={formHelp}>We use this to verify the change.</p>
       </div>
 
       <div className="space-y-1">

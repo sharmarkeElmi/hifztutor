@@ -219,11 +219,7 @@ export default function TutorSettingsPage() {
       ) : null}
 
       {activeKey === "email" && (
-        <EmailChangeForm
-          onSubmit={submitEmail}
-          isSubmitting={savingEmail}
-          currentEmail={currentEmail}
-        />
+        <EmailChangeForm onSubmit={submitEmail} isSubmitting={savingEmail} />
       )}
 
       {activeKey === "password" && (

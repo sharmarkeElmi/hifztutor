@@ -4,7 +4,7 @@ import TutorProfileForm from "@features/tutors/settings/TutorProfileForm";
 
 export default function TutorProfilePage() {
   return (
-    <div className="py-6">
+    <div className="bg-white py-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="mx-auto text-center lg:mx-0 lg:max-w-2xl lg:text-left">
           <h1 className="text-2xl font-semibold text-[#111629]">My profile</h1>

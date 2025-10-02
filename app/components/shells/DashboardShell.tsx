@@ -170,8 +170,10 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
     router.replace("/");
   }, [router]);
 
+  const isTutorProfile = pathname?.startsWith("/tutor/profile");
+
   return (
-    <div className={["min-h-screen", "bg-slate-50"].join(" ")}>
+    <div className={["min-h-screen", isTutorProfile ? "bg-white" : "bg-slate-50"].join(" ")}>
       {/* Top bar with logo and navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
         <div className="w-full px-4 sm:px-6 lg:px-8">
@@ -187,7 +189,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                 width={160}
                 height={36}
                 priority
-                className="h-8 md:h-9 w-auto"
+                className="h-7 md:h-8 w-auto"
               />
             </Link>
             {/* Mobile quick actions: Messages + Notifications */}
@@ -197,7 +199,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                 aria-label="Messages"
                 className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
-                <Image src="/Messages-icon.svg" alt="" width={22} height={22} />
+                <Image src="/Messages-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
                 <MessagesBadge small />
               </Link>
               <button
@@ -205,7 +207,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                 aria-label="Notifications"
                 className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
-                <Image src="/Notification-icon.svg" alt="" width={16} height={14} />
+                <Image src="/Notification-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
                 {/* TODO: wire unread notifications badge when available */}
               </button>
             </div>
@@ -227,7 +229,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                 aria-label="Messages"
                 className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
-                <Image src="/Messages-icon.svg" alt="" width={24} height={24} />
+                <Image src="/Messages-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
                 <MessagesBadge />
               </Link>
               <button
@@ -235,7 +237,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                 aria-label="Notifications"
                 className="relative rounded-md p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501]"
               >
-                <Image src="/Notification-icon.svg" alt="" width={18} height={18} />
+                <Image src="/Notification-icon.svg" alt="" width={20} height={20} className="h-5 w-5" />
                 {/* TODO: wire unread notifications badge when available */}
               </button>
               {/* Account dropdown */}
@@ -251,10 +253,18 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                   <img
                     src={avatarUrl}
                     alt={displayName || "Account avatar"}
-                    className="h-8 w-8 rounded-md object-cover border"
+                    className="h-7 w-7 rounded-md object-cover border border-black"
+                    style={{ borderColor: "#000" }}
                   />
                 ) : (
-                  <Image src="/desktop-dropdown-icon.svg" alt="" width={28} height={28} className="h-8 w-8" />
+                  <Image
+                    src="/desktop-dropdown-icon.svg"
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 rounded-md border border-black"
+                    style={{ borderColor: "#000" }}
+                  />
                 )}
               </button>
               {desktopOpen && (
@@ -265,10 +275,18 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                       <img
                         src={avatarUrl}
                         alt={displayName || "Account avatar"}
-                        className="h-8 w-8 rounded-md object-cover border"
+                        className="h-7 w-7 rounded-md object-cover border border-black"
+                        style={{ borderColor: "#000" }}
                       />
                     ) : (
-                      <Image src="/desktop-dropdown-icon.svg" alt="" width={28} height={28} className="h-8 w-8" />
+                      <Image
+                        src="/desktop-dropdown-icon.svg"
+                        alt=""
+                        width={28}
+                        height={28}
+                        className="h-7 w-7 rounded-md border border-black"
+                        style={{ borderColor: "#000" }}
+                      />
                     )}
                     <span className="text-sm font-semibold text-slate-800 truncate">
                       {displayName || "Your account"}
@@ -416,10 +434,18 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
                   <img
                     src={avatarUrl}
                     alt={displayName || "Account avatar"}
-                    className="h-8 w-8 rounded-md object-cover border"
+                    className="h-7 w-7 rounded-md object-cover border border-black"
+                    style={{ borderColor: "#000" }}
                   />
                 ) : (
-                  <Image src="/desktop-dropdown-icon.svg" alt="" width={28} height={28} className="h-8 w-8" />
+                  <Image
+                    src="/desktop-dropdown-icon.svg"
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 rounded-md border border-black"
+                    style={{ borderColor: "#000" }}
+                  />
                 )}
                 <span className="text-base font-semibold text-slate-800 truncate max-w-[200px]">
                   {displayName || "Your account"}

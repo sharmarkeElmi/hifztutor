@@ -380,7 +380,10 @@ export default function TutorProfileForm() {
       ) : null}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,340px)]">
         <div className="space-y-6">
-          <section className="bg-white p-4 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm">
+          <section
+            className="bg-white p-4 sm:rounded-2xl border-2 border-black sm:p-6 sm:shadow-sm"
+            style={{ borderColor: "#000" }}
+          >
             <div>
               <div className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]">
                 <span>Profile image</span>
@@ -455,7 +458,10 @@ export default function TutorProfileForm() {
             </div>
           </section>
 
-          <section className="bg-white p-4 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm">
+          <section
+            className="bg-white p-4 sm:rounded-2xl border-2 border-black sm:p-6 sm:shadow-sm"
+            style={{ borderColor: "#000" }}
+          >
             <div>
               <div className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]">
                 <span>Full name</span>
@@ -473,7 +479,10 @@ export default function TutorProfileForm() {
             </div>
           </section>
 
-          <section className="bg-white p-4 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm">
+          <section
+            className="bg-white p-4 sm:rounded-2xl border-2 border-black sm:p-6 sm:shadow-sm"
+            style={{ borderColor: "#000" }}
+          >
             <div>
               <h2 className="mt-1 text-xl font-semibold text-[#111629]">Showcase your expertise</h2>
               <p className="mt-2 text-sm text-slate-500">Give prospective students a clear idea of your experience and how you teach.</p>
@@ -726,7 +735,10 @@ export default function TutorProfileForm() {
 
         <aside className="relative hidden lg:block">
           <div className="sticky top-32">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div
+              className="rounded-2xl border-2 border-black bg-white p-5 shadow-sm"
+              style={{ borderColor: "#000" }}
+            >
               <div className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]">
@@ -765,7 +777,10 @@ export default function TutorProfileForm() {
       </div>
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 pb-3 pt-3 backdrop-blur lg:hidden sm:px-6">
         <div className="space-y-3">
-          <div className="rounded-md border border-slate-200 bg-white">
+          <div
+            className="rounded-md border-2 border-black bg-white"
+            style={{ borderColor: "#000" }}
+          >
             <button
               type="button"
               onClick={() => setShowTips((prev) => !prev)}
@@ -785,7 +800,10 @@ export default function TutorProfileForm() {
               </ul>
             ) : null}
           </div>
-          <div className="rounded-md border border-slate-200 bg-white">
+          <div
+            className="rounded-md border-2 border-black bg-white"
+            style={{ borderColor: "#000" }}
+          >
             <button
               type="button"
               onClick={() => setShowHelp((prev) => !prev)}
