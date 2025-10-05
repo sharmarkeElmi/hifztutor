@@ -11,7 +11,7 @@
  *
  * Usage:
  *   <Shell role="student"> ...page content... </Shell>
- *   <Shell role="tutor"   activeKey="availability"> ... </Shell>
+ *   <Shell role="tutor"   activeKey="schedule"> ... </Shell>
  */
 
 import Link from "next/link";
@@ -29,7 +29,7 @@ type NavKey =
   | "lessons"
   | "saved"
   | "find_tutors"
-  | "availability"
+  | "schedule"
   | "classroom"
   | "insights"
   | "settings";
@@ -138,7 +138,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
         { key: "messages", label: "Messages", href: "/messages" },
         { key: "lessons", label: "My Lessons", href: "/tutor/lessons" },
         { key: "classroom", label: "Classroom", href: "/tutor/classroom" },
-        { key: "availability", label: "Availability", href: "/tutor/availability" },
+        { key: "schedule", label: "Schedule", href: "/tutor/schedule" },
         { key: "insights", label: "Insights", href: "/tutor/insights" },
         { key: "settings", label: "Settings", href: "/tutor/settings" },
         { key: "logout", label: "Log out", href: "#logout" },
