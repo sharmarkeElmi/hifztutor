@@ -75,6 +75,16 @@ export async function PUT(req: Request) {
   const body = (await req.json()) as ProfilePayload;
   const languages = normalizeLanguages(body.languages);
 
+  const { data: profileRow, error: profileFetchError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileFetchError) {
+    return NextResponse.json({ error: profileFetchError.message }, { status: 400 });
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -87,6 +97,16 @@ export async function PUT(req: Request) {
     .eq("id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (profileRow?.role === "tutor" && body.timezone !== undefined) {
+    const { error: tutorError } = await supabase
+      .from("tutor_profiles")
+      .upsert({ tutor_id: user.id, time_zone: body.timezone ?? null }, { onConflict: "tutor_id" });
+
+    if (tutorError) {
+      return NextResponse.json({ error: tutorError.message }, { status: 400 });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

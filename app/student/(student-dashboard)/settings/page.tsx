@@ -8,6 +8,7 @@ import useUpdateProfile from "@features/settings/hooks/useUpdateProfile";
 import useUpdatePassword from "@features/settings/hooks/useUpdatePassword";
 import useChangeEmail from "@features/settings/hooks/useChangeEmail";
 import useUpdateNotifications from "@features/settings/hooks/useUpdateNotifications";
+import { detectLocalTimezone } from "@features/settings/lib/timezones";
 
 // NEW: feature components (extracted forms)
 import ProfileForm, { type ProfileFormValues } from "@features/settings/components/ProfileForm";
@@ -71,6 +72,8 @@ export default function StudentSettingsPage() {
     email: "",
   });
 
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
   const [notifications, setNotifications] = useState<NotificationsState>({
     lessonReminders: true,
     messages: true,
@@ -116,6 +119,7 @@ export default function StudentSettingsPage() {
             languages: Array.isArray(p.languages) ? p.languages.join(", ") : p.languages ?? "",
             email: p.email ?? prev.email ?? "",
           }));
+          setProfileLoaded(true);
         }
         if (!cancelled && nRes.ok) {
           const n = await nRes.json();
@@ -137,6 +141,16 @@ export default function StudentSettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!profileLoaded) return;
+    if (profile.timezone && profile.timezone.length > 0) return;
+    const detected = detectLocalTimezone();
+    setProfile((prev) => ({ ...prev, timezone: detected }));
+    updateProfile({ timezone: detected }).catch(() => {
+      // ignore best-effort update
+    });
+  }, [profileLoaded, profile.timezone, updateProfile]);
 
   // --- Submission handlers wired to feature components ---
 

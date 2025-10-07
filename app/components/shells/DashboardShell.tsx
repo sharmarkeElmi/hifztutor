@@ -58,6 +58,7 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
   const router = useRouter();
   const isMessages = pathname?.startsWith("/messages");
   const isSettings = pathname?.startsWith("/student/settings") || pathname?.startsWith("/tutor/settings");
+  const isTutorSchedule = pathname?.startsWith("/tutor/schedule");
   const [displayName, setDisplayName] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -551,6 +552,8 @@ export default function Shell({ role, children, activeKey, contentClassName }: P
               isMessages
                 ? "w-full px-0 pt-0 pb-0 overflow-hidden"
                 : isSettings
+                ? "w-full px-0 pt-0 pb-0"
+                : isTutorSchedule
                 ? "w-full px-0 pt-0 pb-0"
                 : "mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6",
               contentClassName ?? "",

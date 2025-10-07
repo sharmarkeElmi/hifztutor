@@ -41,7 +41,6 @@ export default function TutorProfileForm() {
   const [photoUrl, setPhotoUrl] = useState("");
   const [subjects, setSubjects] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
-  const [timeZone, setTimeZone] = useState<string>("");
   const [showTips, setShowTips] = useState(true);
   const [showHelp, setShowHelp] = useState(true);
 
@@ -125,7 +124,6 @@ export default function TutorProfileForm() {
         setPhotoUrl(tprof.photo_url ?? "");
         setSubjects(Array.isArray(tprof.subjects) ? (tprof.subjects as string[]) : []);
         setSpecialties(Array.isArray(tprof.specialties) ? (tprof.specialties as string[]) : []);
-        setTimeZone(tprof.time_zone ?? "");
       }
 
       if (!cancelled) setLoading(false);
@@ -220,16 +218,12 @@ export default function TutorProfileForm() {
     const trimmedLanguages = languagesCSV.trim();
     const trimmedRate = rate.trim();
     const trimmedYears = years.trim();
-    const trimmedTimeZone = timeZone.trim();
-
     if (fullName !== trimmedFullName) setFullName(trimmedFullName);
     if (headline !== trimmedHeadline) setHeadline(trimmedHeadline);
     if (bio !== trimmedBio) setBio(trimmedBio);
     if (languagesCSV !== trimmedLanguages) setLanguagesCSV(trimmedLanguages);
     if (rate !== trimmedRate) setRate(trimmedRate);
     if (years !== trimmedYears) setYears(trimmedYears);
-    if (timeZone !== trimmedTimeZone) setTimeZone(trimmedTimeZone);
-
     const languagesArr = trimmedLanguages
       ? trimmedLanguages
           .split(",")
@@ -325,7 +319,6 @@ export default function TutorProfileForm() {
         photo_url: photoUrl || null,
         subjects,
         specialties,
-        time_zone: trimmedTimeZone,
       },
       { onConflict: "tutor_id" }
     );
@@ -641,33 +634,6 @@ export default function TutorProfileForm() {
                   />
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="time-zone"
-                    className="flex w-full items-center gap-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-[#111629]"
-                  >
-                    <span>Time zone (IANA)</span>
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <p className="mt-1 pl-3 text-sm text-slate-600 leading-snug">Your availability will be converted for students automatically.</p>
-                  <input
-                    id="time-zone"
-                    list="common-timezones"
-                    value={timeZone}
-                    onChange={(e) => setTimeZone(e.target.value)}
-                    className="mt-2 h-11 w-full rounded-md border border-slate-200 px-3 text-[15px] font-medium text-[#111629] outline-none placeholder:text-slate-400 transition focus:border-[#D3F501] focus:ring-2 focus:ring-[#D3F501]"
-                    required
-                    aria-required="true"
-                    placeholder="e.g. Europe/London"
-                  />
-                  <datalist id="common-timezones">
-                    <option value="Europe/London" />
-                    <option value="America/New_York" />
-                    <option value="Asia/Riyadh" />
-                    <option value="Asia/Dubai" />
-                    <option value="Europe/Istanbul" />
-                  </datalist>
-                </div>
               </div>
 
               <div className="space-y-4">

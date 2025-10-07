@@ -2,38 +2,44 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { AvailabilityPattern, DayKey } from "../lib/types";
-import {
-  DAY_ORDER,
-  DAY_LABELS,
-  DAY_FULL_LABELS,
-  hoursSetFromPattern,
-  normalizePattern,
-  patternFromHourSets,
-  patternsEqual,
-} from "../lib/utils";
+import { DAY_ORDER, DAY_LABELS, DAY_FULL_LABELS, normalizePattern, patternsEqual } from "../lib/utils";
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 interface WeeklyGridProps {
   pattern: AvailabilityPattern;
+  baseline: AvailabilityPattern;
   onChange?: (pattern: AvailabilityPattern, isDirty: boolean) => void;
 }
 
-export default function WeeklyGrid({ pattern, onChange }: WeeklyGridProps) {
-  const baselineRef = useRef<AvailabilityPattern>(normalizePattern(pattern));
-  const [hourSets, setHourSets] = useState<Record<DayKey, Set<number>>>(() =>
-    hoursSetFromPattern(baselineRef.current)
-  );
+export default function WeeklyGrid({ pattern, baseline, onChange }: WeeklyGridProps) {
+  const normalizedBaseline = useMemo(() => normalizePattern(baseline), [baseline]);
+  const normalizedPattern = useMemo(() => normalizePattern(pattern), [pattern]);
 
-  const patternString = useMemo(() => JSON.stringify(pattern), [pattern]);
+  const baselineRef = useRef<AvailabilityPattern>(normalizedBaseline);
+  const [localPattern, setLocalPattern] = useState<AvailabilityPattern>(normalizedPattern);
+
+  const skipNotifyRef = useRef(true);
+  const externalUpdateRef = useRef(false);
 
   useEffect(() => {
-    const normalized = normalizePattern(pattern);
-    baselineRef.current = normalized;
-    setHourSets(hoursSetFromPattern(normalized));
-    onChange?.(normalized, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patternString]);
+    baselineRef.current = normalizedBaseline;
+  }, [normalizedBaseline]);
+
+  useEffect(() => {
+    externalUpdateRef.current = true;
+    setLocalPattern(normalizedPattern);
+  }, [normalizedPattern]);
+
+  useEffect(() => {
+    if (skipNotifyRef.current || externalUpdateRef.current) {
+      skipNotifyRef.current = false;
+      externalUpdateRef.current = false;
+      return;
+    }
+    const dirty = !patternsEqual(localPattern, baselineRef.current);
+    onChange?.(localPattern, dirty);
+  }, [localPattern, onChange]);
 
   const dragState = useRef<{ active: boolean; setTo: boolean }>({ active: false, setTo: true });
 
@@ -46,19 +52,15 @@ export default function WeeklyGrid({ pattern, onChange }: WeeklyGridProps) {
   }, []);
 
   const toggleCell = (dayKey: DayKey, hour: number, makeAvailable: boolean) => {
-    setHourSets((prev) => {
-      const next: Record<DayKey, Set<number>> = { ...prev } as Record<DayKey, Set<number>>;
-      const updated = new Set(next[dayKey]);
+    setLocalPattern((prev) => {
+      const currentSet = new Set(prev[dayKey]);
       if (makeAvailable) {
-        updated.add(hour);
+        currentSet.add(hour);
       } else {
-        updated.delete(hour);
+        currentSet.delete(hour);
       }
-      next[dayKey] = updated;
-      const nextPattern = normalizePattern(patternFromHourSets(next));
-      const dirty = !patternsEqual(nextPattern, baselineRef.current);
-      onChange?.(nextPattern, dirty);
-      return next;
+      const nextDay = Array.from(currentSet).sort((a, b) => a - b);
+      return { ...prev, [dayKey]: nextDay } as AvailabilityPattern;
     });
   };
 
@@ -79,7 +81,7 @@ export default function WeeklyGrid({ pattern, onChange }: WeeklyGridProps) {
     <div className="space-y-4">
       <div className="overflow-x-auto">
         <div
-          className="min-w-[720px] rounded-2xl border border-slate-200 bg-white"
+          className="w-full min-w-[720px] rounded-2xl border border-slate-200 bg-white"
           style={{ boxShadow: "0 15px 35px -20px rgba(17,22,41,0.25)" }}
         >
           <div
@@ -107,7 +109,7 @@ export default function WeeklyGrid({ pattern, onChange }: WeeklyGridProps) {
                 </div>
                 {DAY_ORDER.map((dayIndex) => {
                   const dayKey = dayIndex.toString() as DayKey;
-                  const available = hourSets[dayKey]?.has(hour) ?? false;
+                  const available = (localPattern[dayKey] ?? []).includes(hour);
                   return (
                     <button
                       key={`${dayKey}-${hour}`}
@@ -131,7 +133,7 @@ export default function WeeklyGrid({ pattern, onChange }: WeeklyGridProps) {
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 lg:hidden">
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-[#D3F501] border border-black" />
           <span>Available</span>

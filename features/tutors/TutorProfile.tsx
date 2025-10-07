@@ -6,12 +6,38 @@
  * Does not render public Footer; parent decides the chrome.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import SlotHoldModal from "@features/booking/components/SlotHoldModal";
-import AvailabilityGrid from "@features/tutors/components/AvailabilityGrid";
+import type { AvailabilityPattern, DayKey } from "@features/schedule/lib/types";
+import { ensurePatternKeys, convertHoursToRanges, formatHour, DAY_FULL_LABELS, DAY_ORDER } from "@features/schedule/lib/utils";
+
+function startOfWeek(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = (day + 6) % 7; // Monday start
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
+function addDays(date: Date, amount: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function startOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 type ProfileRow = {
   full_name: string | null;
@@ -28,6 +54,7 @@ type TutorProfileRow = {
   country_code: string | null;
   years_experience: number | null;
   photo_url: string | null;
+  time_zone?: string | null;
 };
 
 type SlotRow = {
@@ -66,6 +93,10 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
   const [holdOpen, setHoldOpen] = useState(false);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pattern, setPattern] = useState<AvailabilityPattern | null>(null);
+  const [patternTimezone, setPatternTimezone] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
+  const initialWeekSet = useRef(false);
 
   const [authed, setAuthed] = useState(false);
   const pathname = usePathname();
@@ -107,7 +138,7 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
       const { data: t, error: tErr } = await supabase
         .from("tutor_profiles")
         .select(
-          "tutor_id, headline, bio, languages, hourly_rate_cents, country_code, years_experience, photo_url"
+          "tutor_id, headline, bio, languages, hourly_rate_cents, country_code, years_experience, photo_url, time_zone"
         )
         .eq("tutor_id", tutorId)
         .maybeSingle();
@@ -124,6 +155,33 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
         setProfile(p);
         setTutor(t ?? null);
 
+        try {
+          const res = await fetch(`/api/tutors/${tutorId}/availability-pattern`, { cache: "no-store" });
+          if (!cancelled) {
+            if (res.ok) {
+              const body = (await res.json()) as {
+                hours_by_dow: Record<string, number[]> | null;
+                timezone: string | null;
+              };
+              if (body.hours_by_dow) {
+                setPattern(ensurePatternKeys(body.hours_by_dow));
+                setPatternTimezone(body.timezone ?? t?.time_zone ?? null);
+              } else {
+                setPattern(null);
+                setPatternTimezone(body.timezone ?? t?.time_zone ?? null);
+              }
+            } else {
+              setPattern(null);
+              setPatternTimezone(t?.time_zone ?? null);
+            }
+          }
+        } catch {
+          if (!cancelled) {
+            setPattern(null);
+            setPatternTimezone(t?.time_zone ?? null);
+          }
+        }
+
         // Availability slots (available only, next 20 future)
         const { data: s, error: sErr } = await supabase
           .from("lesson_slots")
@@ -133,8 +191,8 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
           .eq("tutor_id", tutorId)
           .eq("status", "available")
           .gt("starts_at", new Date().toISOString())
-          .order("starts_at", { ascending: true })
-          .limit(20);
+        .order("starts_at", { ascending: true })
+        .limit(21 * 24);
 
         if (sErr) {
           if (!cancelled) setSlots([]);
@@ -184,10 +242,47 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
       .eq("status", "available")
       .gt("starts_at", new Date().toISOString())
       .order("starts_at", { ascending: true })
-      .limit(20);
+      .limit(21 * 24);
     if (!error) setSlots(data ?? []);
     setRefreshing(false);
   }
+
+  useEffect(() => {
+    if (initialWeekSet.current) return;
+    if (!slots.length) return;
+    initialWeekSet.current = true;
+    setWeekStart(startOfWeek(new Date(slots[0].starts_at)));
+  }, [slots]);
+
+  const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
+  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }), []);
+  const dayLabelFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { weekday: "short" }), []);
+  const dateLabelFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }), []);
+  const weekLabel = useMemo(() => {
+    const end = addDays(weekStart, 6);
+    const startLabel = dateLabelFormatter.format(weekStart);
+    const endLabel = dateLabelFormatter.format(end);
+    const year = end.getFullYear();
+    return `${startLabel} – ${endLabel}, ${year}`;
+  }, [weekStart, dateLabelFormatter]);
+  const localTimezone = useMemo(() => patternTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone, [patternTimezone]);
+
+  const slotsByDay = useMemo(() => {
+    const buckets: SlotRow[][] = Array.from({ length: 7 }, () => []);
+    slots.forEach((slot) => {
+      const start = new Date(slot.starts_at);
+      if (start < weekStart || start >= weekEnd) return;
+      const dayIndex = Math.floor((startOfDay(start).getTime() - weekStart.getTime()) / (24 * 60 * 60 * 1000));
+      if (dayIndex < 0 || dayIndex >= 7) return;
+      buckets[dayIndex].push(slot);
+    });
+    buckets.forEach((list) =>
+      list.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+    );
+    return buckets;
+  }, [slots, weekStart, weekEnd]);
+
+  const hasSlotsThisWeek = useMemo(() => slotsByDay.some((d) => d.length > 0), [slotsByDay]);
 
   function onPickSlot(slotId: string) {
     setActiveSlotId(slotId);
@@ -199,8 +294,6 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
     setActiveSlotId(null);
     void refreshSlots();
   }
-
-  // Availability presentation is delegated to AvailabilityGrid.
 
   const displayName = profile?.full_name ?? "Hifz Tutor";
   const headline = tutor?.headline ?? "Qur’an / Hifz tutor";
@@ -343,10 +436,144 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
         <p className="mt-2 whitespace-pre-line text-gray-700">{bio}</p>
       </div>
 
-      {/* Available lessons - weekly grid */}
-      <div className="mt-6">
-        <AvailabilityGrid slots={slots} refreshing={refreshing} onSelectSlot={onPickSlot} />
+      {/* Weekly booking schedule */}
+      <div className="mt-6 rounded-2xl border border-[#CDD5E0] bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setWeekStart((prev) => addDays(prev, -7))}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-sm font-semibold text-[#02667C] hover:bg-[#E5F6F8]"
+              aria-label="Previous week"
+            >
+              ‹
+            </button>
+            <div className="text-sm font-semibold text-[#111629]">{weekLabel}</div>
+            <button
+              type="button"
+              onClick={() => setWeekStart((prev) => addDays(prev, 7))}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-sm font-semibold text-[#02667C] hover:bg-[#E5F6F8]"
+              aria-label="Next week"
+            >
+              ›
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            <span>Times shown in {localTimezone}</span>
+            <button
+              type="button"
+              onClick={() => setWeekStart(startOfWeek(new Date()))}
+              className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-[#02667C] hover:bg-[#E5F6F8]"
+            >
+              Back to this week
+            </button>
+          </div>
+        </div>
+
+        {refreshing ? (
+          <div className="mt-4 text-xs text-slate-400">Refreshing availability…</div>
+        ) : null}
+
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          {Array.from({ length: 7 }).map((_, index) => {
+            const dayDate = addDays(weekStart, index);
+            const dayName = dayLabelFormatter.format(dayDate);
+            const dayNum = dayDate.getDate();
+            const daySlots = slotsByDay[index];
+
+            return (
+              <div key={index} className="flex flex-col rounded-2xl border border-[#E6EEF0] bg-[#F8FDFE] p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between border-b border-[#E0EAEB] pb-2">
+                  <div className="text-sm font-semibold text-[#02667C]">{dayName}</div>
+                  <div className="text-xs font-semibold text-slate-400">{dayNum}</div>
+                </div>
+
+                {daySlots.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center text-xs text-slate-300">No slots</div>
+                ) : (
+                  <div className="space-y-2 text-center text-sm text-[#02667C]">
+                    {daySlots.map((slot) => {
+                      const startLabel = timeFormatter.format(new Date(slot.starts_at));
+                      const isSoon = sameDay(new Date(slot.starts_at), new Date());
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => onPickSlot(slot.id)}
+                          className={`w-full rounded-md px-2 py-1 font-semibold transition hover:bg-[#D6F1F5] ${
+                            isSoon ? "bg-[#EAF9FC]" : "bg-[#F8FDFE]"
+                          }`}
+                        >
+                          {startLabel}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {!hasSlotsThisWeek ? (
+          <div className="mt-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+            No upcoming slots this week. Try navigating to another week or check back soon.
+          </div>
+        ) : null}
       </div>
+
+      {/* Weekly pattern summary (fallback when no explicit slots) */}
+      {pattern && slots.length === 0 ? (
+        <div className="mt-6 rounded-xl border bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-bold text-[#111629]">Recurring weekly pattern</h2>
+            {patternTimezone ? (
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Times shown in {patternTimezone}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[720px] rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="grid grid-cols-7 gap-6 border-t border-slate-200 pt-4 text-sm">
+                {DAY_ORDER.map((dayIndex) => {
+                  const dayKey = dayIndex.toString() as keyof AvailabilityPattern;
+                  const labelKey = dayIndex.toString() as DayKey;
+                  const dayHours = pattern[dayKey] ?? [];
+                  const ranges = convertHoursToRanges(dayHours);
+
+                  return (
+                    <div key={dayKey} className="flex flex-col">
+                      <div className="mb-3 text-center">
+                        <div className="text-sm font-semibold text-[#02667C]">{DAY_FULL_LABELS[labelKey]}</div>
+                        <div className="mt-1 h-1 rounded-full bg-[#02667C]/30" />
+                      </div>
+
+                      {ranges.length === 0 ? (
+                        <div className="flex flex-1 items-center justify-center rounded-lg bg-slate-50 py-6 text-xs text-slate-300">
+                          No slots
+                        </div>
+                      ) : (
+                        <div className="space-y-3 text-center font-medium text-[#02667C]">
+                          {ranges.map((range, groupIdx) => (
+                            <div key={`${dayKey}-${groupIdx}`} className="space-y-1">
+                              {Array.from({ length: range.end - range.start }, (_, i) => range.start + i).map((hour) => (
+                                <div key={`${dayKey}-${groupIdx}-${hour}`} className="rounded-md bg-[#E5F6F8] px-2 py-1 tabular-nums">
+                                  {formatHour(hour)}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Placeholder for reviews/availability */}
       <div className="mt-6 rounded-xl border bg-white p-5 text-sm text-muted-foreground">

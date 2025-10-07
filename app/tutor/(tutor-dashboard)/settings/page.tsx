@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import SettingsShell, { type SettingsTab } from "@shells/SettingsShell";
 import { Button } from "@components/ui/button";
@@ -8,11 +8,16 @@ import { Button } from "@components/ui/button";
 import PasswordForm, { type PasswordFormValues } from "@features/settings/components/PasswordForm";
 import EmailChangeForm, { type EmailChangeValues } from "@features/settings/components/EmailChangeForm";
 import NotificationsForm, { type NotificationsValues } from "@features/settings/components/NotificationsForm";
+import ProfileForm, { type ProfileFormValues } from "@features/settings/components/ProfileForm";
+import useUpdateProfile from "@features/settings/hooks/useUpdateProfile";
 import useUpdatePassword from "@features/settings/hooks/useUpdatePassword";
 import useChangeEmail from "@features/settings/hooks/useChangeEmail";
 import useUpdateNotifications from "@features/settings/hooks/useUpdateNotifications";
+import { detectLocalTimezone } from "@features/settings/lib/timezones";
+import { createBrowserClient } from "@supabase/ssr";
 // --- Tabs config (tutor) ---
 const TABS: SettingsTab[] = [
+  { key: "account", label: "Account", href: "/tutor/settings?tab=account" },
   { key: "email", label: "Email", href: "/tutor/settings?tab=email" },
   { key: "password", label: "Password", href: "/tutor/settings?tab=password" },
   { key: "notifications", label: "Notifications", href: "/tutor/settings?tab=notifications" },
@@ -36,20 +41,37 @@ function getErrorMessage(err: unknown): string {
 }
 
 export default function TutorSettingsPage() {
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
+
   const updatePassword = useUpdatePassword();
   const changeEmail = useChangeEmail();
   const updateNotifications = useUpdateNotifications();
+  const updateProfile = useUpdateProfile();
   const params = useSearchParams();
   const activeKey = useMemo(() => {
-    const key = params.get("tab") || "email";
-    return TABS.some((t) => t.key === key) ? key : "email";
+    const key = params.get("tab") || "account";
+    return TABS.some((t) => t.key === key) ? key : "account";
   }, [params]);
 
   const [status, setStatus] = useState<StatusState>(null);
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
+  const [savingAccount, setSavingAccount] = useState(false);
   const [currentEmail, setCurrentEmail] = useState<string>("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [profile, setProfile] = useState<{ fullName: string; timezone: string }>({
+    fullName: "",
+    timezone: "",
+  });
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [notifications, setNotifications] = useState<NotificationsState>({
     lessonReminders: true,
@@ -82,6 +104,11 @@ export default function TutorSettingsPage() {
         if (!cancelled && pRes.ok) {
           const p = await pRes.json();
           setCurrentEmail(p.email ?? "");
+          setProfile({
+            fullName: p.fullName ?? "",
+            timezone: p.timezone ?? "",
+          });
+          setProfileLoaded(true);
         }
       } catch {
         // keep UI usable
@@ -92,6 +119,28 @@ export default function TutorSettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (!active) return;
+      if (error) return;
+      setUserId(data.user?.id ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!profileLoaded) return;
+    if (profile.timezone && profile.timezone.length > 0) return;
+    const detected = detectLocalTimezone();
+    setProfile((prev) => ({ ...prev, timezone: detected }));
+    updateProfile({ timezone: detected }).catch(() => {
+      // ignore best-effort failure
+    });
+  }, [profileLoaded, profile.timezone, updateProfile]);
 
   // --- Submission handlers routed to feature components ---
 
@@ -131,6 +180,46 @@ export default function TutorSettingsPage() {
       setStatus({ type: "error", message: getErrorMessage(err) || "Could not update email" });
     } finally {
       setSavingEmail(false);
+    }
+  }
+
+  const triggerScheduleSync = useCallback(async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      await fetch("/api/tutor/schedule/sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+    } catch {
+      // ignore best effort sync failure
+    }
+  }, [supabase]);
+
+  async function submitAccount(values: ProfileFormValues) {
+    setSavingAccount(true);
+    setStatus(null);
+    try {
+      await updateProfile({ fullName: values.fullName, timezone: values.timezone });
+      setStatus({ type: "success", message: "Account updated" });
+      setProfile({
+        fullName: values.fullName,
+        timezone: values.timezone ?? "",
+      });
+
+      if (userId) {
+        await supabase
+          .from("tutor_availability_patterns")
+          .upsert({ tutor_id: userId, timezone: values.timezone ?? null }, { onConflict: "tutor_id" });
+      }
+
+      await triggerScheduleSync();
+    } catch (err) {
+      setStatus({ type: "error", message: getErrorMessage(err) || "Could not update account" });
+    } finally {
+      setSavingAccount(false);
     }
   }
 
@@ -182,6 +271,7 @@ export default function TutorSettingsPage() {
   }
 
   const titleByKey: Record<string, string> = {
+    account: "Account",
     email: "Email",
     password: "Password",
     notifications: "Notifications",
@@ -194,7 +284,9 @@ export default function TutorSettingsPage() {
       activeKey={activeKey}
       title={titleByKey[activeKey]}
       description={
-        activeKey === "email"
+        activeKey === "account"
+          ? "Update your name and default timezone."
+          : activeKey === "email"
           ? "Manage your email."
           : activeKey === "password"
           ? "Change your password."
@@ -217,6 +309,19 @@ export default function TutorSettingsPage() {
           {status.message}
         </div>
       ) : null}
+
+      {activeKey === "account" && (
+        <ProfileForm
+          initialValues={{
+            fullName: profile.fullName,
+            timezone: profile.timezone,
+          }}
+          onSubmit={submitAccount}
+          isSubmitting={savingAccount}
+          showDisplayName={false}
+          showCountry={false}
+        />
+      )}
 
       {activeKey === "email" && (
         <EmailChangeForm onSubmit={submitEmail} isSubmitting={savingEmail} />

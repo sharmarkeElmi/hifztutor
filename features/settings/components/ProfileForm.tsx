@@ -5,6 +5,8 @@
 
 import * as React from "react";
 import { Button } from "@components/ui/button";
+import TimezoneSelect from "@features/settings/components/TimezoneSelect";
+import { detectLocalTimezone } from "@features/settings/lib/timezones";
 
 export type ProfileFormValues = {
   fullName: string;
@@ -19,6 +21,9 @@ type ProfileFormProps = {
   isSubmitting?: boolean;
   // Allow extra content (e.g., save status) to be injected from pages
   footerSlot?: React.ReactNode;
+  showDisplayName?: boolean;
+  showCountry?: boolean;
+  showTimezone?: boolean;
 };
 
 export default function ProfileForm({
@@ -26,6 +31,9 @@ export default function ProfileForm({
   onSubmit,
   isSubmitting = false,
   footerSlot,
+  showDisplayName = true,
+  showCountry = true,
+  showTimezone = true,
 }: ProfileFormProps) {
   const [values, setValues] = React.useState<ProfileFormValues>({
     fullName: initialValues?.fullName ?? "",
@@ -33,6 +41,23 @@ export default function ProfileForm({
     country: initialValues?.country ?? "",
     timezone: initialValues?.timezone ?? "",
   });
+  const deviceTimezone = React.useMemo(() => detectLocalTimezone(), []);
+
+  React.useEffect(() => {
+    setValues({
+      fullName: initialValues?.fullName ?? "",
+      displayName: initialValues?.displayName ?? "",
+      country: initialValues?.country ?? "",
+      timezone: initialValues?.timezone ?? "",
+    });
+  }, [initialValues?.country, initialValues?.displayName, initialValues?.fullName, initialValues?.timezone]);
+
+  React.useEffect(() => {
+    setValues((prev) => {
+      if (prev.timezone && prev.timezone.length > 0) return prev;
+      return { ...prev, timezone: deviceTimezone };
+    });
+  }, [deviceTimezone]);
 
   function handleChange<K extends keyof ProfileFormValues>(key: K, v: ProfileFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -58,35 +83,37 @@ export default function ProfileForm({
           />
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Display name</span>
-          <input
-            aria-label="Display name"
-            className="h-10 rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-            value={values.displayName ?? ""}
-            onChange={(e) => handleChange("displayName", e.target.value)}
-          />
-        </label>
+        {showDisplayName ? (
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Display name</span>
+            <input
+              aria-label="Display name"
+              className="h-10 rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
+              value={values.displayName ?? ""}
+              onChange={(e) => handleChange("displayName", e.target.value)}
+            />
+          </label>
+        ) : null}
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Country</span>
-          <input
-            aria-label="Country"
-            className="h-10 rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-            value={values.country ?? ""}
-            onChange={(e) => handleChange("country", e.target.value)}
-          />
-        </label>
+        {showCountry ? (
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Country</span>
+            <input
+              aria-label="Country"
+              className="h-10 rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
+              value={values.country ?? ""}
+              onChange={(e) => handleChange("country", e.target.value)}
+            />
+          </label>
+        ) : null}
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Time zone</span>
-          <input
-            aria-label="Time zone"
-            className="h-10 rounded-md border px-3 outline-none focus:ring-2 focus:ring-[#D3F501]"
-            value={values.timezone ?? ""}
-            onChange={(e) => handleChange("timezone", e.target.value)}
+        {showTimezone ? (
+          <TimezoneSelect
+            value={values.timezone ?? deviceTimezone}
+            onChange={(tz) => handleChange("timezone", tz)}
+            helperText="Used to show schedules in your local time."
           />
-        </label>
+        ) : null}
       </div>
 
       <div className="flex items-center justify-between gap-3 pt-2">
