@@ -5,10 +5,33 @@ import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 
 function zonedDateToUtc(year: number, month: number, day: number, hour: number, timeZone: string): Date {
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
-  const specifiedDate = new Date(utcDate.toLocaleString("en-US", { timeZone }));
-  const offset = utcDate.getTime() - specifiedDate.getTime();
-  return new Date(utcDate.getTime() + offset);
+  const assumedUtc = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = formatter.formatToParts(assumedUtc);
+  const values: Record<string, number> = {};
+  for (const part of parts) {
+    if (part.type === "literal") continue;
+    values[part.type] = Number(part.value);
+  }
+  const asUtc = Date.UTC(
+    values.year,
+    (values.month ?? 1) - 1,
+    values.day ?? 1,
+    values.hour ?? 0,
+    values.minute ?? 0,
+    values.second ?? 0
+  );
+  const offset = asUtc - assumedUtc.getTime();
+  return new Date(assumedUtc.getTime() - offset);
 }
 
 export async function POST(request: Request) {
@@ -52,12 +75,20 @@ export async function POST(request: Request) {
   }
 
   const timezone = patternRow?.timezone || null;
-  const { data: tutorProfile } = await admin
-    .from("tutor_profiles")
-    .select("time_zone, hourly_rate_cents")
-    .eq("tutor_id", tutorId)
-    .maybeSingle();
-  const effectiveTimezone = timezone || tutorProfile?.time_zone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const [{ data: tutorProfile }, { data: profileRow }] = await Promise.all([
+    admin
+      .from("tutor_profiles")
+      .select("time_zone, hourly_rate_cents")
+      .eq("tutor_id", tutorId)
+      .maybeSingle(),
+    admin
+      .from("profiles")
+      .select("timezone")
+      .eq("id", tutorId)
+      .maybeSingle(),
+  ]);
+  const effectiveTimezone =
+    profileRow?.timezone || timezone || tutorProfile?.time_zone || Intl.DateTimeFormat().resolvedOptions().timeZone;
   const basePriceCents = typeof tutorProfile?.hourly_rate_cents === "number" ? tutorProfile.hourly_rate_cents : 0;
 
   const today = new Date();

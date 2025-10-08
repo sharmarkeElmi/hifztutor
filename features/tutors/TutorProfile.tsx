@@ -6,7 +6,7 @@
  * Does not render public Footer; parent decides the chrome.
  */
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -29,14 +29,34 @@ function addDays(date: Date, amount: number): Date {
   return next;
 }
 
-function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function zonedDateToUtc(year: number, month: number, day: number, hour: number, timeZone: string): Date {
+  const assumedUtc = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = formatter.formatToParts(assumedUtc);
+  const values: Record<string, number> = {};
+  for (const part of parts) {
+    if (part.type === "literal") continue;
+    values[part.type] = Number(part.value);
+  }
+  const asUtc = Date.UTC(
+    values.year,
+    (values.month ?? 1) - 1,
+    values.day ?? 1,
+    values.hour ?? 0,
+    values.minute ?? 0,
+    values.second ?? 0
+  );
+  const offset = asUtc - assumedUtc.getTime();
+  return new Date(assumedUtc.getTime() - offset);
 }
 
 type ProfileRow = {
@@ -247,40 +267,125 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
     setRefreshing(false);
   }
 
+  const displayTimezone = useMemo(
+    () => patternTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    [patternTimezone]
+  );
+
+  const datePartsFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: displayTimezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+    [displayTimezone]
+  );
+  const weekdayFormatter = useMemo(
+    () => new Intl.DateTimeFormat("en-US", { timeZone: displayTimezone, weekday: "short" }),
+    [displayTimezone]
+  );
+
+  const getTzInfo = useCallback(
+    (value: Date | string) => {
+      const dateObj = typeof value === "string" ? new Date(value) : value;
+      const parts = datePartsFormatter.formatToParts(dateObj);
+      const part = (type: Intl.DateTimeFormatPart["type"]) => parts.find((p) => p.type === type)?.value ?? "";
+      const year = Number(part("year"));
+      const month = Number(part("month"));
+      const day = Number(part("day"));
+      const hour = Number(part("hour"));
+      const minute = Number(part("minute"));
+      const dateKey = `${part("year")}-${part("month")}-${part("day")}`;
+      const weekdayLabel = weekdayFormatter.format(dateObj).slice(0, 3);
+      const weekdayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekdayLabel);
+      return {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        dateKey,
+        weekdayIndex: weekdayIndex >= 0 ? weekdayIndex : new Date(dateObj).getDay(),
+      };
+    },
+    [datePartsFormatter, weekdayFormatter]
+  );
+
   useEffect(() => {
     if (initialWeekSet.current) return;
     if (!slots.length) return;
     initialWeekSet.current = true;
-    setWeekStart(startOfWeek(new Date(slots[0].starts_at)));
-  }, [slots]);
+    const info = getTzInfo(slots[0].starts_at);
+    const zonedStart = zonedDateToUtc(info.year, info.month, info.day, 0, displayTimezone);
+    setWeekStart(startOfWeek(zonedStart));
+  }, [slots, displayTimezone, getTzInfo]);
 
-  const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
-  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }), []);
-  const dayLabelFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { weekday: "short" }), []);
-  const dateLabelFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }), []);
+  const weekDayInfos = useMemo(() => {
+    return Array.from({ length: 7 }, (_, idx) => {
+      const baseDate = addDays(weekStart, idx);
+      const info = getTzInfo(baseDate);
+      return {
+        ...info,
+        zonedStart: zonedDateToUtc(info.year, info.month, info.day, 0, displayTimezone),
+      };
+    });
+  }, [displayTimezone, getTzInfo, weekStart]);
+
   const weekLabel = useMemo(() => {
-    const end = addDays(weekStart, 6);
-    const startLabel = dateLabelFormatter.format(weekStart);
-    const endLabel = dateLabelFormatter.format(end);
-    const year = end.getFullYear();
+    if (!weekDayInfos.length) return "";
+    const first = weekDayInfos[0];
+    const last = weekDayInfos[weekDayInfos.length - 1];
+    const startLabel = new Date(first.zonedStart).toLocaleDateString("en-GB", {
+      timeZone: displayTimezone,
+      month: "short",
+      day: "numeric",
+    });
+    const endLabel = new Date(last.zonedStart).toLocaleDateString("en-GB", {
+      timeZone: displayTimezone,
+      month: "short",
+      day: "numeric",
+    });
+    const year = new Date(last.zonedStart).getFullYear();
     return `${startLabel} – ${endLabel}, ${year}`;
-  }, [weekStart, dateLabelFormatter]);
-  const localTimezone = useMemo(() => patternTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone, [patternTimezone]);
+  }, [displayTimezone, weekDayInfos]);
+
+  const dayKeyToIndex = useMemo(() => {
+    const map = new Map<string, number>();
+    weekDayInfos.forEach((info, idx) => {
+      map.set(info.dateKey, idx);
+    });
+    return map;
+  }, [weekDayInfos]);
 
   const slotsByDay = useMemo(() => {
     const buckets: SlotRow[][] = Array.from({ length: 7 }, () => []);
     slots.forEach((slot) => {
-      const start = new Date(slot.starts_at);
-      if (start < weekStart || start >= weekEnd) return;
-      const dayIndex = Math.floor((startOfDay(start).getTime() - weekStart.getTime()) / (24 * 60 * 60 * 1000));
-      if (dayIndex < 0 || dayIndex >= 7) return;
-      buckets[dayIndex].push(slot);
+      const info = getTzInfo(slot.starts_at);
+      const index = dayKeyToIndex.get(info.dateKey);
+      if (index === undefined) return;
+      buckets[index].push(slot);
     });
     buckets.forEach((list) =>
       list.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
     );
     return buckets;
-  }, [slots, weekStart, weekEnd]);
+  }, [dayKeyToIndex, getTzInfo, slots]);
+
+  const timeFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", timeZone: displayTimezone }),
+    [displayTimezone]
+  );
+  const dayLabelFormatter = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { weekday: "short", timeZone: displayTimezone }),
+    [displayTimezone]
+  );
+  const localTimezone = displayTimezone;
+  const todayInfo = useMemo(() => getTzInfo(new Date()), [getTzInfo]);
 
   const hasSlotsThisWeek = useMemo(() => slotsByDay.some((d) => d.length > 0), [slotsByDay]);
 
@@ -462,7 +567,11 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
             <span>Times shown in {localTimezone}</span>
             <button
               type="button"
-              onClick={() => setWeekStart(startOfWeek(new Date()))}
+              onClick={() =>
+                setWeekStart(
+                  startOfWeek(zonedDateToUtc(todayInfo.year, todayInfo.month, todayInfo.day, 0, displayTimezone))
+                )
+              }
               className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-[#02667C] hover:bg-[#E5F6F8]"
             >
               Back to this week
@@ -476,10 +585,11 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
 
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {Array.from({ length: 7 }).map((_, index) => {
-            const dayDate = addDays(weekStart, index);
+            const dayInfo = weekDayInfos[index];
+            const dayDate = dayInfo ? new Date(dayInfo.zonedStart) : addDays(weekStart, index);
             const dayName = dayLabelFormatter.format(dayDate);
             const dayNum = dayDate.getDate();
-            const daySlots = slotsByDay[index];
+            const daySlots = slotsByDay[index] ?? [];
 
             return (
               <div key={index} className="flex flex-col rounded-2xl border border-[#E6EEF0] bg-[#F8FDFE] p-4 shadow-sm">
@@ -494,7 +604,8 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
                   <div className="space-y-2 text-center text-sm text-[#02667C]">
                     {daySlots.map((slot) => {
                       const startLabel = timeFormatter.format(new Date(slot.starts_at));
-                      const isSoon = sameDay(new Date(slot.starts_at), new Date());
+                      const slotInfo = getTzInfo(slot.starts_at);
+                      const isSoon = slotInfo.dateKey === todayInfo.dateKey;
                       return (
                         <button
                           key={slot.id}
@@ -529,7 +640,7 @@ export default function TutorProfile({ tutorId, basePath = "/tutors" }: Props) {
             <h2 className="text-xl font-bold text-[#111629]">Recurring weekly pattern</h2>
             {patternTimezone ? (
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Times shown in {patternTimezone}
+                Times shown in {displayTimezone}
               </span>
             ) : null}
           </div>

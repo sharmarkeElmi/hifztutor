@@ -55,10 +55,33 @@ const WEEKDAY_TO_INDEX: Record<string, number> = {
 };
 
 function zonedDateToUtc(year: number, month: number, day: number, hour: number, timeZone: string): Date {
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
-  const specifiedDate = new Date(utcDate.toLocaleString("en-US", { timeZone }));
-  const offset = utcDate.getTime() - specifiedDate.getTime();
-  return new Date(utcDate.getTime() + offset);
+  const assumedUtc = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = formatter.formatToParts(assumedUtc);
+  const values: Record<string, number> = {};
+  for (const part of parts) {
+    if (part.type === "literal") continue;
+    values[part.type] = Number(part.value);
+  }
+  const asUtc = Date.UTC(
+    values.year,
+    (values.month ?? 1) - 1,
+    values.day ?? 1,
+    values.hour ?? 0,
+    values.minute ?? 0,
+    values.second ?? 0
+  );
+  const offset = asUtc - assumedUtc.getTime();
+  return new Date(assumedUtc.getTime() - offset);
 }
 
 export default function TutorSchedulePage() {
@@ -464,30 +487,74 @@ export default function TutorSchedulePage() {
 
   const statusByCell = useMemo(() => {
     const now = Date.now();
-    return slotsByDay.map((daySlots) => {
+    const patternHoursByDay = weekDayInfos.map((info) => {
+      if (!info) return new Set<number>();
+      const dayKey = info.weekdayIndex.toString() as keyof AvailabilityPattern;
+      return new Set(savedPattern[dayKey] ?? []);
+    });
+
+    return weekDayInfos.map((dayInfo, dayIndex) => {
       const map: Record<number, { status: SlotRow["status"]; label: string; avatar?: string }> = {};
+      const patternHours = new Set(patternHoursByDay[dayIndex] ?? []);
+
+      const daySlots = slotsByDay[dayIndex] ?? [];
       daySlots.forEach((slot) => {
         const tzInfo = getTzInfo(slot.starts_at);
         const hour = tzInfo.hour;
-        const normalizedStatus: SlotRow["status"] =
-          slot.status === "held" || slot.status === "canceled" ? "available" : slot.status;
+        const inPattern = patternHours.has(hour);
+        const normalizedStatus: SlotRow["status"] = (() => {
+          const raw = (slot.status ?? "available").toString().toLowerCase();
+          if (raw === "completed" || raw === "confirmed") return "booked";
+          if (raw === "canceled" || raw === "released" || raw === "archived") return "available";
+          if (raw === "held") return "held";
+          if (raw === "booked") return "booked";
+          return "available";
+        })();
+
         let label = "";
         let avatar: string | undefined;
+        const slotTime = new Date(slot.starts_at).getTime();
 
         if (normalizedStatus === "booked") {
           const detail = bookedDetails[slot.id];
           label = detail?.studentName ? `Booked · ${detail.studentName}` : "Booked";
           avatar = detail?.studentAvatar ?? undefined;
-        } else if (normalizedStatus === "available" && new Date(slot.starts_at).getTime() < now) {
-          label = "Unavailable";
+        } else if (normalizedStatus === "held") {
+          if (slot.hold_expires_at) {
+            const expires = new Date(slot.hold_expires_at);
+            if (expires.getTime() > now) {
+              label = `Held until ${expires.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+            } else {
+              label = "Unavailable";
+            }
+          }
+        } else {
+          const isPast = slotTime < now;
+          if (inPattern) {
+            if (isPast) label = "Unavailable";
+          } else if (normalizedStatus === "available") {
+            patternHours.delete(hour);
+            return;
+          }
         }
 
         map[hour] = { status: normalizedStatus, label, avatar };
+        patternHours.delete(hour);
       });
+
+      if (dayInfo) {
+        patternHours.forEach((hour) => {
+          const slotUtc = zonedDateToUtc(dayInfo.year, dayInfo.month, dayInfo.day, hour, displayTimezone);
+          if (slotUtc.getTime() >= now) return;
+          if (!map[hour]) {
+            map[hour] = { status: "available", label: "Unavailable" };
+          }
+        });
+      }
 
       return map;
     });
-  }, [bookedDetails, getTzInfo, slotsByDay]);
+  }, [bookedDetails, displayTimezone, getTzInfo, savedPattern, slotsByDay, weekDayInfos]);
 
   useEffect(() => {
     if (panelMode === "edit") {
