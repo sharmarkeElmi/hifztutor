@@ -132,29 +132,31 @@ export default function SettingsShell({
 
         {/* Content pane */}
         <div className="sm:flex-1">
-          <div
-            className="relative overflow-hidden rounded-2xl border-[3px] border-black bg-white p-6 sm:p-8 lg:p-10 max-w-3xl w-full mx-auto mt-6 sm:mt-12"
-            style={{ borderColor: "#000" }}
-          >
-            <div className="settings-pane space-y-10">
-              {title ? (
-                <div className="space-y-3">
-                  <h1 className="text-[22px] sm:text-2xl lg:text-[30px] font-bold tracking-tight leading-snug">{title}</h1>
-                  {description ? (
-                    <p className="text-slate-600 text-[16px] leading-relaxed">{description}</p>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {children}
-            </div>
-
-            {/* Accent blob */}
+          <div className="relative mx-auto mt-6 w-full max-w-3xl px-2 pb-20 sm:mt-12 sm:px-0 sm:pb-0">
             <div
-              className="pointer-events-none absolute -right-10 -top-10 h-20 w-20 rounded-full opacity-5"
-              style={{ background: "#D3F501" }}
-              aria-hidden
-            />
+              className="relative flex min-h-[60vh] flex-col overflow-hidden rounded-xl border-0 bg-white p-5 sm:min-h-0 sm:rounded-2xl sm:border-[3px] sm:border-black sm:p-8 lg:p-10"
+              style={{ borderColor: "#000" }}
+            >
+              <div className="settings-pane flex flex-1 flex-col gap-8 sm:gap-10">
+                {title ? (
+                  <div className="space-y-3">
+                    <h1 className="text-[22px] sm:text-2xl lg:text-[30px] font-bold tracking-tight leading-snug">{title}</h1>
+                    {description ? (
+                      <p className="text-slate-600 text-[16px] leading-relaxed">{description}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {children}
+              </div>
+
+              {/* Accent blob */}
+              <div
+                className="pointer-events-none absolute -right-10 -top-10 hidden h-20 w-20 rounded-full opacity-5 sm:block"
+                style={{ background: "#D3F501" }}
+                aria-hidden
+              />
+            </div>
           </div>
         </div>
       </div>

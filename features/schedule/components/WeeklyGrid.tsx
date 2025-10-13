@@ -81,7 +81,7 @@ export default function WeeklyGrid({ pattern, baseline, onChange }: WeeklyGridPr
     <div className="space-y-4">
       <div className="overflow-x-auto">
         <div
-          className="w-full min-w-[720px] rounded-2xl border border-slate-200 bg-white"
+          className="w-full min-w-[720px] rounded-2xl border border-slate-300 bg-white"
           style={{ boxShadow: "0 15px 35px -20px rgba(17,22,41,0.25)" }}
         >
           <div
@@ -94,7 +94,7 @@ export default function WeeklyGrid({ pattern, baseline, onChange }: WeeklyGridPr
               return (
                 <div
                   key={dayKey}
-                  className="sticky top-0 z-10 border-l border-slate-200 bg-white px-3 py-3 text-center font-semibold text-[#111629]"
+                  className="sticky top-0 z-10 border-l border-slate-300 bg-white px-3 py-3 text-center font-semibold text-[#111629]"
                 >
                   {DAY_LABELS[dayKey]}
                 </div>
@@ -103,7 +103,7 @@ export default function WeeklyGrid({ pattern, baseline, onChange }: WeeklyGridPr
             {HOURS.map((hour) => (
               <Fragment key={hour}>
                 <div
-                  className="border-t border-slate-100 px-3 py-2 text-sm font-medium text-slate-500"
+                  className="border-t border-slate-200 px-3 py-2 text-sm font-medium text-slate-500"
                 >
                   {hour.toString().padStart(2, "0")}:00
                 </div>
@@ -116,9 +116,9 @@ export default function WeeklyGrid({ pattern, baseline, onChange }: WeeklyGridPr
                       type="button"
                       onPointerDown={(event) => handlePointerDown(dayKey, hour, available, event)}
                       onPointerEnter={() => handlePointerEnter(dayKey, hour)}
-                      className={`border-t border-l px-1 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D3F501] focus-visible:ring-offset-0 ${
+                      className={`border-t border-l border-slate-200 px-1 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DFF068] focus-visible:ring-offset-0 ${
                         available
-                          ? "bg-[#D3F501] text-[#111629] font-semibold"
+                          ? "bg-[#DFF068] text-[#111629] font-semibold"
                           : "bg-slate-50 text-slate-400"
                       }`}
                       aria-pressed={available}
@@ -135,7 +135,7 @@ export default function WeeklyGrid({ pattern, baseline, onChange }: WeeklyGridPr
       </div>
       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 lg:hidden">
         <div className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full bg-[#D3F501] border border-black" />
+          <span className="h-3 w-3 rounded-full bg-[#DFF068] border border-black" />
           <span>Available</span>
         </div>
         <div className="flex items-center gap-2">

@@ -567,21 +567,30 @@ export default function TutorSchedulePage() {
   return (
     <div className="w-full space-y-8 px-4 sm:px-6 lg:px-10 pt-6 lg:pt-8">
       <header className="flex flex-col gap-3 border-b border-slate-200 pb-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={() => setModalOpen(true)}>Add time off</Button>
-        </div>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full border border-emerald-300 bg-emerald-100" />
-            <span>Available</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full border border-slate-300 bg-slate-200" />
-            <span>Unavailable</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full border border-rose-300 bg-rose-100" />
-            <span>Booked</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <Button
+            onClick={() => setModalOpen(true)}
+            className="h-11 w-full whitespace-nowrap text-base font-semibold sm:h-10 sm:w-auto sm:px-5"
+          >
+            Add time off
+          </Button>
+          <div className="grid w-full grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-500 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-4">
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full border border-emerald-300 bg-emerald-100" />
+              <span>Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full border border-[#C0DA2D] bg-[#DFF068]" />
+              <span>Recurring pattern</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full border border-slate-300 bg-slate-200" />
+              <span>Unavailable</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full border border-rose-300 bg-rose-100" />
+              <span>Booked</span>
+            </div>
           </div>
         </div>
       </header>
@@ -669,19 +678,25 @@ export default function TutorSchedulePage() {
                       const dayInfo = weekDayInfos[index];
                       const weekend = dayInfo ? dayInfo.weekdayIndex === 0 || dayInfo.weekdayIndex === 6 : false;
                       const isToday = dayInfo ? dayInfo.dateKey === todayInfo.dateKey : false;
+                      const headerBorders = isToday ? "border-0" : "border-l border-slate-200";
+                      const headerAccent = isToday
+                        ? "bg-[#D3F501] text-[#111629]"
+                        : weekend
+                          ? "bg-slate-50 text-[#02667C]"
+                          : "bg-white text-[#02667C]";
+                      const headerShadow = isToday
+                        ? "inset 0 3px 0 0 #94A3B8, inset 3px 0 0 0 #94A3B8, inset -3px 0 0 0 #94A3B8"
+                        : undefined;
                       return (
                         <div
                           key={`header-${index}`}
-                          className={`sticky top-0 z-10 border-l border-slate-200 px-3 py-3 text-center font-semibold transition-colors ${
-                            isToday
-                              ? "bg-[#F7FFB0] text-[#111629] shadow-[0_2px_0_rgba(211,245,1,0.45)]"
-                              : "bg-white text-[#02667C]"
-                          } ${weekend && !isToday ? "bg-slate-50" : ""}`}
+                          className={`sticky top-0 z-20 px-3 py-3 text-center font-semibold transition-colors ${headerBorders} ${headerAccent}`}
+                          style={headerShadow ? { boxShadow: `${headerShadow}, 0 10px 20px rgba(122,163,0,0.25)` } : undefined}
                         >
-                          <div className="uppercase tracking-[0.15em] text-xs text-slate-500">
+                          <div className={`uppercase tracking-[0.15em] text-xs ${isToday ? "text-[#4A5A20]" : "text-slate-500"}`}>
                             {dayInfo ? dayLabelFormatter.format(new Date(dayInfo.zonedStart)) : ""}
                           </div>
-                          <div className="mt-1 text-lg font-semibold text-slate-700">
+                          <div className={`mt-1 text-lg font-semibold ${isToday ? "text-[#1B2732]" : "text-slate-700"}`}>
                             {dayInfo ? dayInfo.day : ""}
                           </div>
                         </div>
@@ -716,14 +731,37 @@ export default function TutorSchedulePage() {
                                 ? "bg-slate-50"
                                 : "bg-white";
 
-                          const ringToday = isToday ? "ring-1 ring-[#D3F501]" : "";
+                          const columnBorders = isToday ? "" : "border-l border-slate-200";
+                          const todayAccent = isToday
+                            ? "shadow-[0_6px_16px_rgba(122,163,0,0.18)]"
+                            : "";
+                          const todayBgTint =
+                            isToday && status !== "booked" && !isUnavailable
+                              ? "bg-[#D3F501]/70"
+                              : "";
 
                           const title = status ? `${formatHour(hour)} ${label || status}` : undefined;
 
                           return (
                             <div
                               key={`${index}-${hour}`}
-                              className={`group border-t border-l border-slate-200 px-2 py-3 text-xs transition-all duration-150 ${baseBg} ${ringToday} hover:-translate-y-[1px] hover:bg-slate-50/80`}
+                              className={`group border-t border-slate-200 ${columnBorders} px-2 py-3 text-xs transition-all duration-150 ${baseBg} ${todayBgTint} ${todayAccent} ${
+                                isToday ? "relative z-10" : ""
+                              } hover:-translate-y-[1px] hover:bg-slate-50/80`}
+                              style={
+                                isToday
+                                  ? {
+                                      boxShadow: [
+                                        "inset 3px 0 0 0 #94A3B8",
+                                        "inset -3px 0 0 0 #94A3B8",
+                                        hour === HOURS[HOURS.length - 1] ? "inset 0 -3px 0 0 #94A3B8" : null,
+                                        "0 6px 16px rgba(122,163,0,0.18)",
+                                      ]
+                                        .filter(Boolean)
+                                        .join(", "),
+                                    }
+                                  : undefined
+                              }
                               title={title}
                               aria-label={title}
                             >
@@ -737,7 +775,7 @@ export default function TutorSchedulePage() {
                                   />
                                 </span>
                               ) : null}
-                              {label ? (
+                              {label && !isUnavailable ? (
                                 <span className="block text-[11px] font-semibold leading-tight text-[#02667C]">
                                   {label}
                                 </span>
